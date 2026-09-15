@@ -1,0 +1,102 @@
+task
+Q1. Configure HTPasswd Authentication
+Configure the OpenShift OAuth server to use an HTPasswd identity provider with the following values:
+configure the Oauth to use HTPasswd as the identity provider.
+Identity Provider name is ex280-provider.
+Create four users: harry, leader , raja, qa-engineer and all should have review password.
+Configure user and apply password for them. Or Ensure that four users account exist.
+Secret name is super-secret
+
+Question 2. Manage Cluster Project and Permissions:
+Create 3 projects, front-end, back-end, and app-db
+harry user should have cluster administrator rights.
+leader user should be able create project but not administrator tasks.
+No other user should able to create project.
+raja user can only view the resources of front-end and back-end projects.
+qa-engineer user should have admin access to front-end project.
+kubaadmin is not present (make sure your cluster-admin user is working fine before delete kubeadmin, otherwise ocp-cluster not recoverable)
+
+Q3. Create Groups and Assign Project Roles Objective
+The harry user will create 3 groups, leaders, developers and qa.
+Add leader user in leaders group.
+Add raja user in developers group.
+Add qa-engineer user in qa group.
+Give edit permission to leaders group members to the back-end and app-db projects.
+Give view permission to qa group members to the front-end project.
+
+Question 4. Protect External Traffic with TLS
+Create secure Route with below information
+Create a secure route in quart project.
+Expose application https://todo-http.apps.cluster-rhqzz.dyn.redhatworkshops.io
+Generate self sign certificate using given subject
+"/C=ID/ST=DKI Jakarta/L=Jakarta/O=Red Hat/CN=$(oc get route --no-headers | awk '{print $2}')"
+Note: Service already created in any given project you just have to expose service with https
+The application should produce the output
+
+Question 5. An application is running on the red project. There is one pod running and your task is it must generate the output
+
+Question 6. Create a Service Account called ex280-sa in a alpha project. This project is already created for you.
+There is an application already running.
+ServiceAccoun should be associated with anyuid SCC
+
+Question 7. Deploy application in the project alpha:
+There is one pod already running
+Modify the application as is should run with any user as provided by application
+Application should produce output
+
+Question 8. Create secret with named ex280-secret in cloud project. The key name should be MYSQL_PASSWORD and the value of key should be redhat123
+
+Question 9. Use the secret ex280-secret in project cloud
+There is one pod already exist
+It should use ex280-secret secret previously created.
+Application should produce output.
+check the logs or events.
+
+Question 10. Create Resources Quota with below information for project beta
+Quota Name is ex280-quota
+Maximum Pods 7 and Service ip 6 and Replication Controller 5
+Memory 1G and cpu core is 1
+
+Question 11. Create LimitRange for project orange:
+Set the pod memory limit between 5Mi and 300Mi
+Set the container memory limit between 5Mi and 300Mi and container default memory request is 100Mi
+Set the pod cpu limit between 5m and 300m
+Set the container cpu limit between 5m and 300m and container default request limit for cpu is 100m
+
+Question 12. Scale the single-pod replicas to 5 under the project tiger and all pods should run.
+
+Question 13. Configure Resource Request & limits into deployment and Apply AutoScale Rule in the project scalling.
+Minimum replicas = 2 , Maximum replicas = 5 and cpu percentage = 50%
+Default request for containers memory should 100Mi and CPU 50m
+
+Question 14. Install an helm chart ex280-repo from repository https://charts.bitnami.com/bitnami
+
+Question 15. Create a cronjob test-cron in the `tiger' project
+04:05 time
+Every 2 day and every month
+Use image registry.io/nginx
+Use service account and service account name is ex280-sa
+Successful job history limit 14
+Project name should be tiger
+Create a cronjob using webconsole or take yaml from documentation
+
+Question 16. Question: create an network policy to connect two pod which are resides in different projects
+First pod is in network-policy namespace and second is in different-namespace project
+Pod in project different-namespace should communicate with network-policy pod
+Create an network policy with name allow-specific
+Policy uses labels to specify namespace with network: different-namespace and for pods selector
+Uses label env=production
+Use port 8080/tcp
+Check the logs of different-namespace pod for verification
+
+Question 17. Question: Create an project template with limitrange with container
+minimum memory is 5Mi, max is 1Gi. defaultrequest 254 Mi defaultlimit is 512 Mi .
+make sure this template available as default request new-project template for users.
+
+Question 18. Create a Liveliness Health Probe in project tuesday which has 1 pod running
+With port 8443
+Initial delay of 3 sec
+Time out for the probe is 10 sec
+Probe must survive atleast 3 crash
+
+Question 19. Collect Cluster information and create a tar file with name student101-<cluster.id>.tar.gz and send it to redhat support.
