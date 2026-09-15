@@ -1,0 +1,75 @@
+oc new-project alpha
+oc new-app --name gitlab  --image docker.io/gitlab/gitlab-ce:latest
+
+oc new-project quart
+oc new-app --name todo-http --image image-registry.openshift-image-registry.svc:5000/openshift/httpd 
+oc expose service todo-http --hostname  todo-http$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
+
+oc new-project red
+oc new-app --name red-app --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
+oc patch deployment red-app   -p '{"spec":{"template":{"spec":{"containers":[{"name":"red-app","resources":{"limits":{"cpu":"20","memory":"40Gi"}}}]}}}}'
+TARGET_NODE=$(oc get nodes -l node-role.kubernetes.io/worker -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+if [ -z "$TARGET_NODE" ]; then
+  TARGET_NODE=$(oc get nodes -o jsonpath='{.items[0].metadata.name}')
+fi
+oc adm taint node $TARGET_NODE datacenter=delhi:NoSchedule --overwrite
+oc patch deployment red-app -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"'"$TARGET_NODE"'"}}}}}'
+
+oc new-project cloud
+oc create deployment mysql-app --image image-registry.openshift-image-registry.svc:5000/openshift/mysql
+oc create secret generic ex280-root --from-literal=MYSQL_USER=redhat --from-literal=MYSQL_DATABASE=world_x
+oc set env --from=secret/ex280-root deployment mysql-app
+
+oc new-project tiger
+oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
+
+oc new-project scalling
+oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
+
+oc new-project network-policy || oc project network-policy
+oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000/openshift/httpd -n network-policy
+oc expose deployment hello --name=hello --port=8080 --target-port=8080 -n network-policy 2>/dev/null || true
+CURRENT_PROJECT=$(oc project -q)
+APPS_SUFFIX=$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
+ROUTE_HOSTNAME="${CURRENT_PROJECT}${APPS_SUFFIX}"
+oc expose service hello --name=hello --hostname="${ROUTE_HOSTNAME}" -n network-policy 2>/dev/null || true
+cat <<EOF | oc apply -n network-policy -f -
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+EOF
+
+oc new-project different-namespace || oc project different-namespace
+TARGET_DOMAIN_URL="http://${ROUTE_HOSTNAME}"
+cat <<EOF | oc apply -n different-namespace -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sample-app
+  namespace: different-namespace
+spec:
+  containers:
+  - name: client
+    image: image-registry.openshift-image-registry.svc:5000/openshift/httpd
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      echo "=== Client Service Started ==="
+      echo "Targeting Domain: ${TARGET_DOMAIN_URL}"
+      while true; do
+        if curl -s -m 2 ${TARGET_DOMAIN_URL} > /dev/null; then
+          echo "\$(date '+%H:%M:%S') [SUCCESS] Connected to ${TARGET_DOMAIN_URL}"
+        else
+          echo "\$(date '+%H:%M:%S') [FAILED] Connection blocked."
+        fi
+        sleep 3
+      done
+EOF
+
+oc new-project tuesday
+oc new-app --name liveness-deployment --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
