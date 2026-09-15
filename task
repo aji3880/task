@@ -29,7 +29,7 @@ Create secure Route with below information
 Create a secure route in quart project.
 Expose application https://todo-http.apps.cluster-rhqzz.dyn.redhatworkshops.io
 Generate self sign certificate using given subject
-"/C=ID/ST=DKI Jakarta/L=Jakarta/O=Red Hat/CN=$(oc get route --no-headers | awk '{print $2}')"
+"/C=ID/ST=DKI Jakarta/L=Jakarta/O=Red Hat/CN=$(oc get route -n quart --no-headers | awk '{print $2}')"
 Note: Service already created in any given project you just have to expose service with https
 The application should produce the output
 
