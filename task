@@ -74,7 +74,7 @@ Question 14. Install an helm chart ex280-repo from repository https://charts.bit
 Question 15. Create a cronjob test-cron in the `tiger' project
 04:05 time
 Every 2 day and every month
-Use image registry.io/nginx
+Use image nginx
 Use service account and service account name is ex280-sa
 Successful job history limit 14
 Project name should be tiger
