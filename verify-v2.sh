@@ -907,10 +907,10 @@ check_q15() {
   grep -qE 'successfulJobsHistoryLimit: 14' <<<"$yaml" && { pass "Q15: successfulJobsHistoryLimit=14"; q_pass=$((q_pass+1)); } || fail "Q15: successfulJobsHistoryLimit is not 14"
 
   q_total=$((q_total+1))
-  if grep -qE 'image:[[:space:]]*registry\.io/nginx' <<<"$yaml"; then
-    pass "Q15: image registry.io/nginx found"; q_pass=$((q_pass+1))
+  if grep -qE 'image:[[:space:]]*nginx' <<<"$yaml"; then
+    pass "Q15: image nginx found"; q_pass=$((q_pass+1))
   else
-    fail "Q15: image registry.io/nginx not found"
+    fail "Q15: nginx not found"
   fi
 
   calculate_q_score "$q_pass" "$q_total" "$q_max"
