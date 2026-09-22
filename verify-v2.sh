@@ -742,8 +742,8 @@ check_q12() {
   fi
 
   local total running
-  total="$(oc get pods -n tiger --no-headers 2>/dev/null | wc -l | tr -d ' ')"
-  running="$(oc get pods -n tiger --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+  total="$(oc get pods -n tiger --no-headers 2>/dev/null | grep 'hello' | wc -l | tr -d ' ')"
+  running="$(oc get pods -n tiger --field-selector=status.phase=Running --no-headers 2>/dev/null | grep 'hello' | wc -l | tr -d ' ')"
 
   q_total=$((q_total+1))
   [[ "$total" == "5" ]] && { pass "Q12: 5 pods exist in tiger"; q_pass=$((q_pass+1)); } || fail "Q12: expected 5 pods; found $total"
