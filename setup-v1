@@ -121,3 +121,9 @@ oc patch dc hydra -n lerna --type=json -p='[
     "value": [{"containerPort": 8080, "protocol": "TCP"}]
   }
 ]' 2>/dev/null || true
+
+oc new-project area51 2>/dev/null || oc project area51
+oc create deployment oxcart \
+  --image=registry.redhat.io/rhscl/httpd-24-rhel7 \
+  -n area51 2>/dev/null || true
+oc create service clusterip oxcart --tcp=8080:8080 -n area51 2>/dev/null || true
