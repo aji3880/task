@@ -742,8 +742,8 @@ check_q12() {
   fi
 
   local total running
-  total="$(oc get pods -n tiger --no-headers 2>/dev/null | wc -l | tr -d ' ')"
-  running="$(oc get pods -n tiger --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+  total="$(oc get pods -n tiger --no-headers 2>/dev/null | grep 'hello' | wc -l | tr -d ' ')"
+  running="$(oc get pods -n tiger --field-selector=status.phase=Running --no-headers 2>/dev/null | grep 'hello' | wc -l | tr -d ' ')"
 
   q_total=$((q_total+1))
   [[ "$total" == "5" ]] && { pass "Q12: 5 pods exist in tiger"; q_pass=$((q_pass+1)); } || fail "Q12: expected 5 pods; found $total"
@@ -907,10 +907,10 @@ check_q15() {
   grep -qE 'successfulJobsHistoryLimit: 14' <<<"$yaml" && { pass "Q15: successfulJobsHistoryLimit=14"; q_pass=$((q_pass+1)); } || fail "Q15: successfulJobsHistoryLimit is not 14"
 
   q_total=$((q_total+1))
-  if grep -qE 'image:[[:space:]]*registry\.io/nginx' <<<"$yaml"; then
-    pass "Q15: image registry.io/nginx found"; q_pass=$((q_pass+1))
+  if grep -qE 'image:[[:space:]]*nginx' <<<"$yaml"; then
+    pass "Q15: image nginx found"; q_pass=$((q_pass+1))
   else
-    fail "Q15: image registry.io/nginx not found"
+    fail "Q15: nginx not found"
   fi
 
   calculate_q_score "$q_pass" "$q_total" "$q_max"
