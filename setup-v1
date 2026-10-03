@@ -1,0 +1,111 @@
+oc new-project apples 2>/dev/null || oc project apples
+oc create sa ex280sa -n apples 2>/dev/null || true
+oc create dc oranges \
+  --image=registry.redhat.io/ubi8/ubi \
+  -n apples \
+  -- /bin/sh -c "while true; do echo 'Oranges App is running successfully!'; sleep 5; done" 2>/dev/null || true
+oc patch dc oranges -n apples -p '{"spec":{"template":{"metadata":{"labels":{"app":"oranges","deploymentconfig":"oranges"}}}}}'
+oc create service clusterip oranges --tcp=8080:8080 -n apples 2>/dev/null || true
+oc patch svc oranges -n apples -p '{"spec":{"selector":{"app":null,"deploymentconfig":"orange"}}}'
+oc expose svc oranges -n apples 2>/dev/null || true
+
+oc new-project pathfinder 2>/dev/null || oc project pathfinder
+for node in $(oc get nodes -l node-role.kubernetes.io/worker -o jsonpath='{.items[*].metadata.name}'); do
+  oc label node "$node" star- 2>/dev/null || true
+done
+cat <<EOF | oc apply -n pathfinder -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voyager
+  labels:
+    app: voyager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: voyager
+  template:
+    metadata:
+      labels:
+        app: voyager
+    spec:
+      nodeSelector:
+        star: trek
+      containers:
+      - name: voyager
+        image: registry.redhat.io/ubi8/ubi
+        command: ["/bin/sh", "-c", "while true; do echo 'Voyager App is running and sending telemetry data...'; sleep 5; done"]
+EOF
+
+oc new-project mercury 2>/dev/null || oc project mercury
+oc create dc atlas \
+  --image=registry.redhat.io/ubi8/ubi \
+  -n mercury \
+  -- /bin/sh -c "while true; do echo 'Atlas App is running successfully in mercury!'; sleep 5; done" 2>/dev/null || true
+oc patch dc atlas -n mercury --type=json -p='[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/resources",
+    "value": {
+      "requests": {
+        "memory": "80Gi"
+      }
+    }
+  }
+]'
+
+oc new-project bullwinkle 2>/dev/null || oc project bullwinkle
+for node in $(oc get nodes -l node-role.kubernetes.io/worker -o jsonpath='{.items[*].metadata.name}'); do
+  oc adm taint nodes "$node" key1=value1:NoSchedule --overwrite 2>/dev/null || true
+done
+cat <<EOF | oc apply -n bullwinkle -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rocky
+  labels:
+    app: rocky
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rocky
+  template:
+    metadata:
+      labels:
+        app: rocky
+    spec:
+      containers:
+      - name: rocky
+        image: registry.redhat.io/ubi8/ubi
+        command: ["/bin/sh", "-c", "while true; do echo 'Rocky App is running in bullwinkle!'; sleep 5; done"]
+EOF
+oc create service clusterip rocky --tcp=8080:8080 -n bullwinkle 2>/dev/null || true
+oc create route edge rocky --service=rocky --hostname=wrong-rocky.$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p') -n bullwinkle 2>/dev/null || true
+
+oc new-project gru 2>/dev/null || oc project gru
+
+# 2. Deploy aplikasi 'minion' dengan 1 replica awal
+cat <<EOF | oc apply -n gru -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minion
+  labels:
+    app: minion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minion
+  template:
+    metadata:
+      labels:
+        app: minion
+    spec:
+      containers:
+      - name: minion
+        image: registry.redhat.io/ubi8/ubi
+        command: ["/bin/sh", "-c", "while true; do echo 'Minion App is running!'; sleep 5; done"]
+EOF
