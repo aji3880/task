@@ -147,11 +147,7 @@ spec:
     app: qed
   type: ClusterIP
 EOF
-
-# 4. Deploy Route 'qed' (Agar bisa diakses via Browser)
 oc expose service qed -n math 2>/dev/null || true
-
-# 5. Deploy Deployment 'qed' menggunakan Nginx
 cat <<EOF | oc apply -n math -f -
 apiVersion: apps/v1
 kind: Deployment
@@ -179,24 +175,26 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
         - |
-          # Pengecekan Fail-Fast (JIKA SECRET/ENV BELUM TERPARSINKAN)
+          # 1. Pengecekan Fail-Fast (JIKA SECRET/ENV BELUM TERPASANG)
           if [ -z "\$DECODER_RING" ]; then
             echo "Sorry, application is not configured correctly."
             echo "FATAL: DECODER_RING environment variable is missing!"
             exit 1
           fi
 
-          # Inject HTML UI jika DECODER_RING ada
-          cat <<HTML > /opt/app-root/src/index.html
+          # 2. Generate HTML ke Lokasi Web Root Nginx yang Benar
+          mkdir -p /usr/share/nginx/html /opt/app-root/src
+          
+          cat <<HTML | tee /usr/share/nginx/html/index.html /opt/app-root/src/index.html
           <!DOCTYPE html>
           <html>
           <head>
             <title>QED Application Decoded</title>
             <style>
-              body { font-family: Arial, sans-serif; background-color: #0d1117; color: #ffffff; text-align: center; padding-top: 50px; }
-              .box { border: 3px solid #2ea043; background-color: #161b22; display: inline-block; padding: 30px; border-radius: 10px; }
-              .success { color: #3fb950; font-size: 24px; font-weight: bold; }
-              .code { background-color: #21262d; color: #58a6ff; padding: 10px; font-family: monospace; font-size: 16px; border-radius: 5px; }
+              body { font-family: monospace, Arial; background-color: #0d1117; color: #ffffff; text-align: center; padding-top: 50px; }
+              .box { border: 3px solid #2ea043; background-color: #161b22; display: inline-block; padding: 30px; border-radius: 10px; max-width: 600px; }
+              .success { color: #3fb950; font-size: 22px; font-weight: bold; margin-bottom: 20px; }
+              .code { background-color: #0d1117; color: #58a6ff; padding: 12px; font-size: 15px; border-radius: 5px; word-break: break-all; border: 1px solid #30363d; }
             </style>
           </head>
           <body>
