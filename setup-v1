@@ -130,10 +130,29 @@ oc create service clusterip oxcart --tcp=8080:8080 -n area51 2>/dev/null || true
 
 oc new-project math 2>/dev/null || oc project math
 cat <<EOF | oc apply -n math -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: qed
+  namespace: math
+  labels:
+    app: qed
+spec:
+  ports:
+  - name: 8080-tcp
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: qed
+  type: ClusterIP
+EOF
+cat <<EOF | oc apply -n math -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qed
+  namespace: math
   labels:
     app: qed
 spec:
@@ -149,6 +168,9 @@ spec:
       containers:
       - name: qed
         image: registry.redhat.io/rhscl/httpd-24-rhel7
+        ports:
+        - containerPort: 8080
+          protocol: TCP
         command: ["/bin/sh", "-c"]
         args:
         - |
@@ -158,6 +180,16 @@ spec:
             exit 1
           fi
 
-          echo "Success! DECODER_RING loaded correctly."
+          cat <<HTML > /opt/app-root/src/index.html
+          <!DOCTYPE html>
+          <html>
+          <head><title>QED App</title></style></head>
+          <body>
+            <h2>[ OK ] QED APPLICATION IS FULLY DECODED!</h2>
+            <p><b>Secret Value:</b> \$DECODER_RING</p>
+          </body>
+          </html>
+          HTML
+
           exec run-httpd
 EOF
