@@ -28,7 +28,6 @@ The user account armstrong is an administrator for project apollo and project ge
 The user account wozniak can view project titan but not administer or delete it
 
 4. Configure groups
-
 Configure your OpenShift cluster to meet the following requirements:
 The user account armstrong is a member of the commander group
 The user account collins is a member of the pilot group
