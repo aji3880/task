@@ -127,3 +127,37 @@ oc create deployment oxcart \
   --image=registry.redhat.io/rhscl/httpd-24-rhel7 \
   -n area51 2>/dev/null || true
 oc create service clusterip oxcart --tcp=8080:8080 -n area51 2>/dev/null || true
+
+oc new-project math 2>/dev/null || oc project math
+cat <<EOF | oc apply -n math -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qed
+  labels:
+    app: qed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qed
+  template:
+    metadata:
+      labels:
+        app: qed
+    spec:
+      containers:
+      - name: qed
+        image: registry.redhat.io/rhscl/httpd-24-rhel7
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          if [ -z "\$DECODER_RING" ]; then
+            echo "Sorry, application is not configured correctly."
+            echo "FATAL: DECODER_RING environment variable is missing!"
+            exit 1
+          fi
+
+          echo "Success! DECODER_RING loaded correctly."
+          exec run-httpd
+EOF
