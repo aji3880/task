@@ -76,7 +76,8 @@ T12_COND="[ \$(oc get pods -n math -l app=qed --field-selector=status.phase=Runn
 check_item "12" "Inject Secret to qed & Verify Running Output" 15 "$T12_COND"
 
 # --- Task 13: Service Account & SCC (20 pts) ---
-T13_COND="oc get sa ex280sa -n apples &>/dev/null && oc get scc anyuid -o jsonpath='{.users}' | grep -q 'system:serviceaccount:apples:ex280sa'"
+# --- Task 13: Service Account & SCC (20 pts) ---
+T13_COND="oc get sa ex280sa -n apples &>/dev/null && (oc adm policy who-can use scc anyuid -n apples 2>/dev/null | grep ex280sa || oc describe scc anyuid | grep -q 'ex280sa')"
 check_item "13" "Create ServiceAccount ex280sa & Grant anyuid SCC" 20 "$T13_COND"
 
 # --- Task 14: Deploy Application with SA (20 pts) ---
