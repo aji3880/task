@@ -211,6 +211,7 @@ spec:
 EOF
 
 oc new-project apples 2>/dev/null || oc project apples
+oc delete sa ex280sa -n apples 2>/dev/null || true
 cat <<EOF | oc apply -n apples -f -
 apiVersion: apps/v1
 kind: Deployment
