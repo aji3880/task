@@ -109,3 +109,15 @@ spec:
         image: registry.redhat.io/ubi8/ubi
         command: ["/bin/sh", "-c", "while true; do echo 'Minion App is running!'; sleep 5; done"]
 EOF
+
+oc new-project lerna 2>/dev/null || oc project lerna
+oc create dc hydra \
+  --image=registry.redhat.io/rhscl/httpd-24-rhel7 \
+  -n lerna 2>/dev/null || true
+oc patch dc hydra -n lerna --type=json -p='[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/ports",
+    "value": [{"containerPort": 8080, "protocol": "TCP"}]
+  }
+]' 2>/dev/null || true
