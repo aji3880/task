@@ -209,3 +209,36 @@ spec:
 
           exec nginx -g "daemon off;"
 EOF
+
+oc new-project apples 2>/dev/null || oc project apples
+cat <<EOF | oc apply -n apples -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oranges
+  namespace: apples
+  labels:
+    app: oranges
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oranges
+  template:
+    metadata:
+      labels:
+        app: oranges
+    spec:
+      containers:
+      - name: oranges
+        image: registry.redhat.io/rhscl/httpd-24-rhel7
+        securityContext:
+          runAsUser: 0
+        ports:
+        - containerPort: 8080
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Oranges app running successfully as UID: \$(id -u)"
+          exec run-httpd
+EOF
