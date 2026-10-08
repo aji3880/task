@@ -44,7 +44,7 @@ spec:
     metadata:
       labels:
         app: hello
-        env: production
+        # env: production (Belum dipasang)
     spec:
       containers:
       - name: hello
@@ -53,13 +53,11 @@ spec:
         - containerPort: 8080
 TARGET
 oc expose deployment hello --port=8080 -n network-policy 2>/dev/null || true
-oc expose service hello -n network-policy 2>/dev/null || true
-ROUTE_HOST=$(oc get route hello -n network-policy -o jsonpath='{.spec.host}')
 cat <<DENY | oc apply -n network-policy -f -
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: default-deny-ingress
+  name: default-deny-all
   namespace: network-policy
 spec:
   podSelector: {}
@@ -74,6 +72,8 @@ kind: Deployment
 metadata:
   name: client-app
   namespace: different-namespace
+  labels:
+    app: client-app
 spec:
   replicas: 1
   selector:
@@ -90,17 +90,18 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
         - |
-          TARGET="http://${ROUTE_HOST}"
+          TARGET="http://hello.network-policy.svc.cluster.local:8080"
           while true; do
             if curl -s -m 2 \${TARGET} > /dev/null; then
               echo "\$(date '+%H:%M:%S') [SUCCESS] Connected to \${TARGET}"
             else
-              echo "\$(date '+%H:%M:%S') [FAILED] Connection blocked by NetworkPolicy."
+              echo "\$(date '+%H:%M:%S') [FAILED] Connection blocked."
             fi
             sleep 3
           done
 CLIENT
-echo "=== Setup Lab Selesai! Route Target: http://${ROUTE_HOST} ==="
+echo -e "\n=== Setup Lab Selesai! ==="
+echo "Kondisi Awal: Koneksi Ter-blokir [FAILED]"
 EOF
 
 oc new-project tuesday
