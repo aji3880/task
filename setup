@@ -27,9 +27,6 @@ oc new-project scalling
 oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
 
 oc new-project network-policy 2>/dev/null || oc project network-policy
-oc delete deployment hello -n network-policy 2>/dev/null || true
-oc delete route hello -n network-policy 2>/dev/null || true
-
 cat <<TARGET | oc apply -n network-policy -f -
 apiVersion: apps/v1
 kind: Deployment
