@@ -28,6 +28,7 @@ oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000
 
 oc new-project network-policy 2>/dev/null || oc project network-policy
 oc delete deployment hello -n network-policy 2>/dev/null || true
+oc delete route hello -n network-policy 2>/dev/null || true
 
 cat <<TARGET | oc apply -n network-policy -f -
 apiVersion: apps/v1
@@ -54,8 +55,9 @@ spec:
         ports:
         - containerPort: 8080
 TARGET
-
-# 2. Terapkan Deny-All NetworkPolicy di namespace target
+oc expose deployment hello --port=8080 -n network-policy 2>/dev/null || true
+oc expose service hello -n network-policy 2>/dev/null || true
+ROUTE_HOST=$(oc get route hello -n network-policy -o jsonpath='{.spec.host}')
 cat <<DENY | oc apply -n network-policy -f -
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
@@ -68,11 +70,7 @@ spec:
   - Ingress
 DENY
 
-# 3. Setup Namespace 'different-namespace' dengan Label 'network: different-namespace'
 oc new-project different-namespace 2>/dev/null || oc project different-namespace
-oc label namespace different-namespace network=different-namespace --overwrite
-
-# 4. Deploy Pod Client di 'different-namespace'
 cat <<CLIENT | oc apply -n different-namespace -f -
 apiVersion: apps/v1
 kind: Deployment
@@ -95,16 +93,18 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
         - |
-          TARGET="hello.network-policy.svc.cluster.local:8080"
+          TARGET="http://${ROUTE_HOST}"
           while true; do
-            if curl -s -m 2 http://${TARGET} > /dev/null; then
-              echo "\$(date '+%H:%M:%S') [SUCCESS] Connected to ${TARGET}"
+            if curl -s -m 2 \${TARGET} > /dev/null; then
+              echo "\$(date '+%H:%M:%S') [SUCCESS] Connected to \${TARGET}"
             else
               echo "\$(date '+%H:%M:%S') [FAILED] Connection blocked by NetworkPolicy."
             fi
             sleep 3
           done
 CLIENT
+echo "=== Setup Lab Selesai! Route Target: http://${ROUTE_HOST} ==="
+EOF
 
 oc new-project tuesday
 oc new-app --name liveness-deployment --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
