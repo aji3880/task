@@ -26,50 +26,85 @@ oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000
 oc new-project scalling
 oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
 
-oc new-project network-policy || oc project network-policy
-oc new-app --name hello --image image-registry.openshift-image-registry.svc:5000/openshift/httpd -n network-policy
-oc expose deployment hello --name=hello --port=8080 --target-port=8080 -n network-policy 2>/dev/null || true
-CURRENT_PROJECT=$(oc project -q)
-APPS_SUFFIX=$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
-ROUTE_HOSTNAME="${CURRENT_PROJECT}${APPS_SUFFIX}"
-oc expose service hello --name=hello --hostname="${ROUTE_HOSTNAME}" -n network-policy 2>/dev/null || true
-cat <<EOF | oc apply -n network-policy -f -
+oc new-project network-policy 2>/dev/null || oc project network-policy
+oc delete deployment hello -n network-policy 2>/dev/null || true
+
+cat <<TARGET | oc apply -n network-policy -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello
+  namespace: network-policy
+  labels:
+    app: hello
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello
+  template:
+    metadata:
+      labels:
+        app: hello
+        env: production
+    spec:
+      containers:
+      - name: hello
+        image: registry.redhat.io/rhscl/httpd-24-rhel7
+        ports:
+        - containerPort: 8080
+TARGET
+
+# 2. Terapkan Deny-All NetworkPolicy di namespace target
+cat <<DENY | oc apply -n network-policy -f -
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: deny-all
+  name: default-deny-ingress
+  namespace: network-policy
 spec:
   podSelector: {}
   policyTypes:
   - Ingress
-EOF
+DENY
 
-oc new-project different-namespace || oc project different-namespace
-TARGET_DOMAIN_URL="http://${ROUTE_HOSTNAME}"
-cat <<EOF | oc apply -n different-namespace -f -
-apiVersion: v1
-kind: Pod
+# 3. Setup Namespace 'different-namespace' dengan Label 'network: different-namespace'
+oc new-project different-namespace 2>/dev/null || oc project different-namespace
+oc label namespace different-namespace network=different-namespace --overwrite
+
+# 4. Deploy Pod Client di 'different-namespace'
+cat <<CLIENT | oc apply -n different-namespace -f -
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: sample-app
+  name: client-app
   namespace: different-namespace
 spec:
-  containers:
-  - name: client
-    image: image-registry.openshift-image-registry.svc:5000/openshift/httpd
-    command: ["/bin/bash", "-c"]
-    args:
-    - |
-      echo "=== Client Service Started ==="
-      echo "Targeting Domain: ${TARGET_DOMAIN_URL}"
-      while true; do
-        if curl -s -m 2 ${TARGET_DOMAIN_URL} > /dev/null; then
-          echo "\$(date '+%H:%M:%S') [SUCCESS] Connected to ${TARGET_DOMAIN_URL}"
-        else
-          echo "\$(date '+%H:%M:%S') [FAILED] Connection blocked."
-        fi
-        sleep 3
-      done
-EOF
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client-app
+  template:
+    metadata:
+      labels:
+        app: client-app
+    spec:
+      containers:
+      - name: client
+        image: registry.redhat.io/ubi8/ubi-minimal
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          TARGET="hello.network-policy.svc.cluster.local:8080"
+          while true; do
+            if curl -s -m 2 http://${TARGET} > /dev/null; then
+              echo "\$(date '+%H:%M:%S') [SUCCESS] Connected to ${TARGET}"
+            else
+              echo "\$(date '+%H:%M:%S') [FAILED] Connection blocked by NetworkPolicy."
+            fi
+            sleep 3
+          done
+CLIENT
 
 oc new-project tuesday
 oc new-app --name liveness-deployment --image image-registry.openshift-image-registry.svc:5000/openshift/httpd
