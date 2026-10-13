@@ -1,0 +1,45 @@
+---
+- name: Fix SELinux, Firewalld, and Web Content on Node1
+  hosts: node1
+  become: true
+  tasks:
+
+    - name: Install firewalld package
+      ansible.builtin.dnf:
+        name: firewalld
+        state: present
+
+    - name: Enable and start firewalld service
+      ansible.builtin.systemd:
+        name: firewalld
+        enabled: true
+        state: started
+
+    - name: Allow HTTPD to bind to port 85 in SELinux
+      ansible.builtin.command:
+        cmd: semanage port -a -t http_port_t -p tcp 85
+      register: semanage_result
+      failed_when:
+        - semanage_result.rc != 0
+        - "'already defined' not in semanage_result.stderr"
+      changed_when: semanage_result.rc == 0
+
+    - name: Restore correct SELinux context on file3
+      ansible.builtin.command:
+        cmd: restorecon -v /var/www/html/file3
+
+    - name: Allow port 85/tcp through firewalld
+      ansible.builtin.command:
+        cmd: firewall-cmd --permanent --add-port=85/tcp
+      notify: Reload Firewalld
+
+    - name: Ensure httpd service is started and enabled
+      ansible.builtin.systemd:
+        name: httpd
+        enabled: true
+        state: restarted
+
+  handlers:
+    - name: Reload Firewalld
+      ansible.builtin.command:
+        cmd: firewall-cmd --reload

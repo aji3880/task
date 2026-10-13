@@ -1,0 +1,219 @@
+---
+- name: Full Setup Lab NFS, Container, and Local HTTP Repo di Node3 (RHEL 8)
+  hosts: node3
+  become: true
+  tasks:
+
+    - name: Install firewalld package
+      ansible.builtin.dnf:
+        name: firewalld
+        state: present
+
+    - name: Enable and start firewalld service
+      ansible.builtin.systemd:
+        name: firewalld
+        enabled: true
+        state: started
+
+    - name: Install nfs-utils package
+      ansible.builtin.dnf:
+        name: nfs-utils
+        state: present
+
+    - name: Enable and start nfs-server service
+      ansible.builtin.systemd:
+        name: nfs-server
+        enabled: true
+        state: started
+
+    - name: Create NFS export top-level directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /export/it_files
+        - /export/dba_files
+        - /export/home
+
+    - name: Create user home directories inside /export/home
+      ansible.builtin.file:
+        path: "/export/home/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - manny
+        - moe
+        - jack
+        - marcia
+        - jan
+        - cindy
+
+    - name: Copy default bash profile files to user home directories
+      ansible.builtin.copy:
+        src: "/etc/skel/{{ item.file }}"
+        dest: "/export/home/{{ item.user }}/{{ item.file }}"
+        remote_src: true
+        owner: "{{ item.uid }}"
+        group: "{{ item.gid }}"
+        mode: '0644'
+      loop: "{{ users_list }}"
+      vars:
+        users_list:
+          - { user: 'manny',  uid: 1010, gid: 1010, file: '.bash_profile' }
+          - { user: 'manny',  uid: 1010, gid: 1010, file: '.bashrc' }
+          - { user: 'manny',  uid: 1010, gid: 1010, file: '.bash_logout' }
+          - { user: 'moe',    uid: 1011, gid: 1011, file: '.bash_profile' }
+          - { user: 'moe',    uid: 1011, gid: 1011, file: '.bashrc' }
+          - { user: 'moe',    uid: 1011, gid: 1011, file: '.bash_logout' }
+          - { user: 'jack',   uid: 1012, gid: 1012, file: '.bash_profile' }
+          - { user: 'jack',   uid: 1012, gid: 1012, file: '.bashrc' }
+          - { user: 'jack',   uid: 1012, gid: 1012, file: '.bash_logout' }
+          - { user: 'marcia', uid: 1013, gid: 1013, file: '.bash_profile' }
+          - { user: 'marcia', uid: 1013, gid: 1013, file: '.bashrc' }
+          - { user: 'marcia', uid: 1013, gid: 1013, file: '.bash_logout' }
+          - { user: 'jan',    uid: 1014, gid: 1014, file: '.bash_profile' }
+          - { user: 'jan',    uid: 1014, gid: 1014, file: '.bashrc' }
+          - { user: 'jan',    uid: 1014, gid: 1014, file: '.bash_logout' }
+          - { user: 'cindy',  uid: 1015, gid: 1015, file: '.bash_profile' }
+          - { user: 'cindy',  uid: 1015, gid: 1015, file: '.bashrc' }
+          - { user: 'cindy',  uid: 1015, gid: 1015, file: '.bash_logout' }
+      ignore_errors: true
+
+    - name: Change ownership recursively on user directories
+      ansible.builtin.file:
+        path: "/export/home/{{ item.user }}"
+        owner: "{{ item.uid }}"
+        group: "{{ item.gid }}"
+        recurse: true
+      loop:
+        - { user: 'manny',  uid: 1010, gid: 1010 }
+        - { user: 'moe',    uid: 1011, gid: 1011 }
+        - { user: 'jack',   uid: 1012, gid: 1012 }
+        - { user: 'marcia', uid: 1013, gid: 1013 }
+        - { user: 'jan',    uid: 1014, gid: 1014 }
+        - { user: 'cindy',  uid: 1015, gid: 1015 }
+
+    - name: Setup the /etc/exports file
+      ansible.builtin.blockinfile:
+        path: /etc/exports
+        create: true
+        mode: '0644'
+        block: |
+          /export/home         192.168.55.0/24(rw,sync,no_root_squash)
+          /export/it_files     192.168.55.0/24(rw,sync,no_root_squash)
+          /export/dba_files    192.168.55.0/24(rw,sync,no_root_squash)
+      notify: Restart NFS Service
+
+    - name: Allow NFS services through firewalld
+      ansible.builtin.command:
+        cmd: "firewall-cmd --permanent --add-service={{ item }}"
+      loop:
+        - nfs
+        - mountd
+        - rpc-bind
+      notify: Reload Firewalld
+
+    - name: Install podman package
+      ansible.builtin.dnf:
+        name: podman
+        state: present
+
+    - name: Create Containerfile on node3
+      ansible.builtin.copy:
+        dest: /root/Containerfile
+        mode: '0644'
+        content: |
+          FROM registry.access.redhat.com/ubi9/ubi:latest
+          RUN dnf -y install httpd; dnf clean all; systemctl enable httpd;
+          RUN echo "Successful Web Server Test" | tee /var/www/html/index.html
+          RUN mkdir /etc/systemd/system/httpd.service.d/; echo -e '[Service]\nRestart=always' | tee /etc/systemd/system/httpd.service.d/httpd.conf
+          EXPOSE 80
+          CMD [ "/sbin/init" ]
+
+    - name: Install httpd, createrepo_c, and yum-utils
+      ansible.builtin.dnf:
+        name:
+          - httpd
+          - createrepo_c
+          - yum-utils
+        state: present
+
+    - name: Create repository directory under HTML root
+      ansible.builtin.file:
+        path: "/var/www/html/repo/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - BaseOS
+        - AppStream
+
+    - name: Sync BaseOS repository packages (Background Sync)
+      ansible.builtin.command:
+        cmd: >
+          dnf reposync --repoid=rhel-8-for-x86_64-baseos-rpms
+          -p /var/www/html/repo/BaseOS
+          --download-metadata
+          --norepopath
+          --newest-only
+      async: 3600
+      poll: 0
+
+    - name: Sync AppStream repository packages (Background Sync)
+      ansible.builtin.command:
+        cmd: >
+          dnf reposync --repoid=rhel-8-for-x86_64-appstream-rpms
+          -p /var/www/html/repo/AppStream
+          --download-metadata
+          --norepopath
+          --newest-only
+      async: 3600
+      poll: 0
+
+    - name: Setup /etc/yum.repos.d/local.repo
+      ansible.builtin.blockinfile:
+        path: /etc/yum.repos.d/local.repo
+        create: true
+        mode: '0644'
+        block: |
+          [BaseOS-Local]
+          name=Red Hat Enterprise Linux 8 BaseOS (Local HTTP)
+          metadata_expire=-1
+          enabled=1
+          gpgcheck=0
+          baseurl=file:///var/www/html/repo/BaseOS/
+
+          [AppStream-Local]
+          name=Red Hat Enterprise Linux 8 AppStream (Local HTTP)
+          metadata_expire=-1
+          enabled=1
+          gpgcheck=0
+          baseurl=file:///var/www/html/repo/AppStream/
+
+    - name: Suppress subscription-manager warnings
+      ansible.builtin.lineinfile:
+        path: /etc/yum/pluginconf.d/subscription-manager.conf
+        regexp: '^enabled\s*='
+        line: 'enabled=0'
+        state: present
+
+    - name: Enable and start httpd service
+      ansible.builtin.systemd:
+        name: httpd
+        enabled: true
+        state: started
+
+    - name: Allow HTTP service through firewalld
+      ansible.builtin.command:
+        cmd: firewall-cmd --permanent --add-service=http
+      notify: Reload Firewalld
+
+  handlers:
+    - name: Restart NFS Service
+      ansible.builtin.systemd:
+        name: nfs-server
+        state: restarted
+
+    - name: Reload Firewalld
+      ansible.builtin.command:
+        cmd: firewall-cmd --reload
