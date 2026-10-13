@@ -94,15 +94,18 @@
         - { user: 'jan',    uid: 1014, gid: 1014 }
         - { user: 'cindy',  uid: 1015, gid: 1015 }
 
-    - name: Setup the /etc/exports file
+    # =======================================================
+    # DIUBAH: Mengambil IP node1 dinamis / mengizinkan semua host (*)
+    # =======================================================
+    - name: Setup the /etc/exports file dynamically for client nodes
       ansible.builtin.blockinfile:
         path: /etc/exports
         create: true
         mode: '0644'
         block: |
-          /export/home         192.168.55.0/24(rw,sync,no_root_squash)
-          /export/it_files     192.168.55.0/24(rw,sync,no_root_squash)
-          /export/dba_files    192.168.55.0/24(rw,sync,no_root_squash)
+          /export/home         *(rw,sync,no_root_squash)
+          /export/it_files     *(rw,sync,no_root_squash)
+          /export/dba_files    *(rw,sync,no_root_squash)
       notify: Restart NFS Service
 
     - name: Allow NFS services through firewalld

@@ -1,12 +1,12 @@
 This task list is written so all dependencies are covered in order. There might be one or two gotchas in there, but nothing should require redoing. setup user 'admin' user to manage all nodes.
-1. Break into server2 and set the password as password. Set the target as multi-user and make sure it boots into that automatically. Reboot to confirm.
+1. Break into server2 and set the password as password. Set the target as multi-user and make sure it boots into that automatically. Reboot to confirm. (abaikan)
 2. Configure the network interfaces and hostnames on both servers.
 3. Ensure network services start at boot.
 4. Enable ssh access for root on both servers.
 5. Enable key-based ssh authentication for root on both servers.
 6. Configure the repos on server1.
 7. Secure copy the repo file to server2.
-8. Configure autofs to automatically mount individual users' home directories from /export/home on 192.168.55.47 to /mnt/autofs_home/<user_name>.
+8. Configure autofs to automatically mount individual users' home directories from /export/home on 192.168.0.217 to /mnt/autofs_home/<user_name>.
 9. Configure both servers to create files with 660 permissions by default.
 10. Set password policies to require a minimum of 8 characters and a maximum age of 60 days.
 11. Write shell scripts on server1 that create users and groups according to the following parameters. Ensure all users except cindy use autofs for their profiles:
