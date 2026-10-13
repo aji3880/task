@@ -55,7 +55,7 @@ The amount of CPU consumed by a single container is between 10m and 500m with a 
 7. Deploy an application
 Deploy the application called rocky in the bullwinkle project so that the following conditions are true:
 The application is reachable at the following address:
-http://rocky.$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
+http://rocky$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
 
 8. Scale an application manually
 Manually scale the minion application in the gru project to a total of 5 replicas.
@@ -74,7 +74,7 @@ The application uses a route called oxcart
 The application uses a CA signed certificate with the following subject fields:
 /C=US/ST=NV/L=Hiko/O=CIA/OU=USAF/CN=classified.$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
 The application is reachable only at the following address:
-https://classified.$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
+https://classified$(oc whoami --show-console | sed -n 's/.*\(\.apps\..*\)/\1/p')
 The application produces output
 
 11. Configure a secret
