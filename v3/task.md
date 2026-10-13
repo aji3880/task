@@ -1,4 +1,4 @@
-This task list is written so all dependencies are covered in order. There might be one or two gotchas in there, but nothing should require redoing.
+This task list is written so all dependencies are covered in order. There might be one or two gotchas in there, but nothing should require redoing. setup user 'admin' user to manage all nodes.
 1. Break into server2 and set the password as password. Set the target as multi-user and make sure it boots into that automatically. Reboot to confirm.
 2. Configure the network interfaces and hostnames on both servers.
 3. Ensure network services start at boot.
