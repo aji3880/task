@@ -1,12 +1,21 @@
 ---
-- name: Fix SELinux, Firewalld, and Web Content on Node1
+- name: Full Setup and Fix Web Server on Node1
   hosts: node1
   become: true
   tasks:
+    - name: Disable rhcd service to prevent log spam
+      ansible.builtin.systemd:
+        name: rhcd
+        state: stopped
+        enabled: false
+      ignore_errors: true
 
-    - name: Install firewalld package
+    - name: Install httpd and firewalld packages
       ansible.builtin.dnf:
-        name: firewalld
+        name:
+          - httpd
+          - firewalld
+          - policycoreutils-python-utils
         state: present
 
     - name: Enable and start firewalld service
@@ -14,6 +23,29 @@
         name: firewalld
         enabled: true
         state: started
+
+    - name: Configure httpd to listen on port 85
+      ansible.builtin.lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^Listen '
+        line: 'Listen 85'
+        state: present
+
+    - name: Create file1 in web root
+      ansible.builtin.copy:
+        dest: /var/www/html/file1
+        content: "RHCSA is Awesome\n"
+        mode: '0644'
+
+    - name: Generate calendar output for file2
+      ansible.builtin.shell:
+        cmd: "cal > /var/www/html/file2"
+
+    - name: Create file3 in web root
+      ansible.builtin.copy:
+        dest: /var/www/html/file3
+        content: "This file is restored and accessible\n"
+        mode: '0644'
 
     - name: Allow HTTPD to bind to port 85 in SELinux
       ansible.builtin.command:
