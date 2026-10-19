@@ -16,3 +16,41 @@
         name: server
         password: "{{ 'R@nd0m1z3dL@bP@ss!' | password_hash('sha512') }}"
         state: present
+    
+    - name: Check if disk_sdb.img exists
+      ansible.builtin.stat:
+        path: /var/opt/disk_sdb.img
+      register: disk_sdb_stat
+
+    - name: Create 10GB raw image for disk_sdb
+      ansible.builtin.command:
+        cmd: dd if=/dev/zero of=/var/opt/disk_sdb.img bs=1M count=10240
+      when: not disk_sdb_stat.exists
+
+    - name: Check if disk_sdc.img exists
+      ansible.builtin.stat:
+        path: /var/opt/disk_sdc.img
+      register: disk_sdc_stat
+
+    - name: Create 10GB raw image for disk_sdc
+      ansible.builtin.command:
+        cmd: dd if=/dev/zero of=/var/opt/disk_sdc.img bs=1M count=10240
+      when: not disk_sdc_stat.exists
+
+    - name: Attach disk_sdb.img to /dev/loop10
+      ansible.builtin.command:
+        cmd: losetup /dev/loop10 /var/opt/disk_sdb.img
+      register: losetup_sdb
+      failed_when:
+        - losetup_sdb.rc != 0
+        - "'busy' not in losetup_sdb.stderr"
+      changed_when: losetup_sdb.rc == 0
+
+    - name: Attach disk_sdc.img to /dev/loop11
+      ansible.builtin.command:
+        cmd: losetup /dev/loop11 /var/opt/disk_sdc.img
+      register: losetup_sdc
+      failed_when:
+        - losetup_sdc.rc != 0
+        - "'busy' not in losetup_sdc.stderr"
+      changed_when: losetup_sdc.rc == 0
