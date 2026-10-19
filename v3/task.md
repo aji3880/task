@@ -16,7 +16,14 @@ losetup /dev/loop11 /var/opt/disk_sdc.img
 ## Lab Task List
 
 1. **[Lab Prep - Ignored]** Break into `server2` and set the password as `password`. Set the target as `multi-user`.
-2. **Network Connection Setup:** Create a new dummy network interface connection named `dummy0` on `node1` and `node2` with `autoconnect=no` (do not modify the primary interface to prevent losing connection).
+2. Network Connection Setup:
+Create a new dummy network interface connection named dummy0 on node1 and node2 with the following parameters:
+Connection Name: dummy0
+Interface Name: dummy0
+IPv4 Address: 172.16.1.10/24 (on node1) and 172.16.1.20/24 (on node2)
+Gateway: 172.16.1.1
+DNS: 192.168.0.1
+Autoconnect: no
 3. **Service Autostart:** Ensure network services (`chronyd` and `firewalld`) start automatically at boot on both servers.
 4. **Root SSH Access:** Enable SSH access for `root` on both servers (`PermitRootLogin yes`).
 5. **Key-Based Authentication:** Enable key-based SSH authentication for `root` on both servers.

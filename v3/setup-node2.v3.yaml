@@ -16,7 +16,19 @@
         name: server
         password: "{{ 'R@nd0m1z3dL@bP@ss!' | password_hash('sha512') }}"
         state: present
-    
+
+    - name: Find all files in /etc/yum.repos.d/
+      ansible.builtin.find:
+        paths: /etc/yum.repos.d/
+        file_type: file
+      register: repo_files
+
+    - name: Remove all repo files in /etc/yum.repos.d/
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ repo_files.files }}"
+
     - name: Check if disk_sdb.img exists
       ansible.builtin.stat:
         path: /var/opt/disk_sdb.img

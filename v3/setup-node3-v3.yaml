@@ -4,6 +4,26 @@
   become: true
   tasks:
 
+    - name: Create server user with password and add to wheel group
+      ansible.builtin.user:
+        name: server
+        password: "{{ 'password' | password_hash('sha512') }}"
+        groups: wheel
+        append: true
+        state: present
+
+    - name: Configure NOPASSWD sudoers privileges for server user
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/server
+        content: "server ALL=(ALL) NOPASSWD: ALL\n"
+        owner: root
+        group: root
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    # =======================================================
+    # NETWORK & NFS SERVICES SETUP
+    # =======================================================
     - name: Install firewalld package
       ansible.builtin.dnf:
         name: firewalld
@@ -94,9 +114,6 @@
         - { user: 'jan',    uid: 1014, gid: 1014 }
         - { user: 'cindy',  uid: 1015, gid: 1015 }
 
-    # =======================================================
-    # DIUBAH: Mengambil IP node1 dinamis / mengizinkan semua host (*)
-    # =======================================================
     - name: Setup the /etc/exports file dynamically for client nodes
       ansible.builtin.blockinfile:
         path: /etc/exports
@@ -117,6 +134,9 @@
         - rpc-bind
       notify: Reload Firewalld
 
+    # =======================================================
+    # CONTAINER & REPOSITORY SETUP
+    # =======================================================
     - name: Install podman package
       ansible.builtin.dnf:
         name: podman
