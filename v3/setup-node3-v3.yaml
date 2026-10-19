@@ -21,9 +21,7 @@
         mode: '0440'
         validate: 'visudo -cf %s'
 
-    # =======================================================
-    # NETWORK & NFS SERVICES SETUP
-    # =======================================================
+
     - name: Install firewalld package
       ansible.builtin.dnf:
         name: firewalld
@@ -134,9 +132,6 @@
         - rpc-bind
       notify: Reload Firewalld
 
-    # =======================================================
-    # CONTAINER & REPOSITORY SETUP
-    # =======================================================
     - name: Install podman package
       ansible.builtin.dnf:
         name: podman
