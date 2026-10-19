@@ -3,6 +3,10 @@
 ### Prerequisites Setup on Node2 (Run Before Starting)
 Since `node2` only has a single main disk (`nvme0n1`), run the following commands as `root` on `node2` to create two 10GB virtual loopback devices for the LVM tasks (Tasks 32–39):
 
+node1 192.168.0.209/24
+node2 192.168.0.143/24
+node3 192.168.0.65/24
+
 ```bash
 dd if=/dev/zero of=/var/opt/disk_sdb.img bs=1M count=10240
 dd if=/dev/zero of=/var/opt/disk_sdc.img bs=1M count=10240
@@ -29,7 +33,7 @@ Autoconnect: no
 5. **Key-Based Authentication:** Enable key-based SSH authentication for `root` on both servers.
 6. **Local Repository Setup:** Configure the local repositories on `node1` (pointing to the HTTP repo on `node3`).
 7. **Copy Repo Config:** Secure copy the `.repo` configuration file from `node1` to `node2`.
-8. **Autofs Configuration:** Configure `autofs` on `node1` to automatically mount individual users' home directories from `/export/home` on `node3` (`192.168.0.217`) to `/mnt/autofs_home/<user_name>`.
+8. **Autofs Configuration:** Configure `autofs` on `node1` to automatically mount individual users' home directories from `/export/home` on `node3` (`ip node3`) to `/mnt/autofs_home/<user_name>`.
 9. **Default File Permissions:** Configure both servers to create files with `660` permissions by default (set `umask 007` in `/etc/bashrc` or `/etc/profile`).
 10. **Password Policies:** Set password policies on both servers to require a minimum of 8 characters and a maximum age of 60 days (edit `/etc/login.defs` and `/etc/security/pwquality.conf`).
 11. **User Automation Script:** Write shell scripts on `node1` that create users and groups according to the following parameters. Ensure all users except `cindy` use `autofs` for their home directory paths:
