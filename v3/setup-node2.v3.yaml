@@ -3,7 +3,6 @@
   hosts: node2
   become: true
   tasks:
-
     - name: Disable rhcd service to prevent log spam
       ansible.builtin.systemd:
         name: rhcd
@@ -17,6 +16,14 @@
         password: "{{ 'R@nd0m1z3dL@bP@ss!' | password_hash('sha512') }}"
         state: present
 
+    - name: Disable DNF subscription-manager plugin
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/plugins/subscription-manager.conf
+        regexp: '^enabled\s*='
+        line: 'enabled=0'
+        state: present
+        mode: '0644'
+
     - name: Find all files in /etc/yum.repos.d/
       ansible.builtin.find:
         paths: /etc/yum.repos.d/
@@ -29,6 +36,11 @@
         state: absent
       loop: "{{ repo_files.files }}"
 
+    - name: Clean DNF cache and refresh repo metadata
+      ansible.builtin.command:
+        cmd: dnf clean all
+      changed_when: true
+
     - name: Check if disk_sdb.img exists
       ansible.builtin.stat:
         path: /var/opt/disk_sdb.img
@@ -37,7 +49,7 @@
     - name: Create 10GB raw image for disk_sdb
       ansible.builtin.command:
         cmd: dd if=/dev/zero of=/var/opt/disk_sdb.img bs=1M count=10240
-      when: not disk_sdb_stat.exists
+      when: not disk_sdb_stat.stat.exists
 
     - name: Check if disk_sdc.img exists
       ansible.builtin.stat:
@@ -47,7 +59,7 @@
     - name: Create 10GB raw image for disk_sdc
       ansible.builtin.command:
         cmd: dd if=/dev/zero of=/var/opt/disk_sdc.img bs=1M count=10240
-      when: not disk_sdc_stat.exists
+      when: not disk_sdc_stat.stat.exists
 
     - name: Attach disk_sdb.img to /dev/loop10
       ansible.builtin.command:
@@ -66,21 +78,3 @@
         - losetup_sdc.rc != 0
         - "'busy' not in losetup_sdc.stderr"
       changed_when: losetup_sdc.rc == 0
-
-    - name: Disable DNF subscription-manager plugin
-      ansible.builtin.ini_file:
-        path: /etc/dnf/plugins/subscription-manager.conf
-        section: main
-        option: enabled
-        value: "0"
-        mode: '0644'
-
-    - name: Remove redhat.repo
-      ansible.builtin.file:
-        path: /etc/yum.repos.d/*
-        state: absent
-
-    - name: Clean DNF cache and refresh repo metadata
-      ansible.builtin.command:
-        cmd: dnf clean all
-      changed_when: true
