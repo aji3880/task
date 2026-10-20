@@ -37,12 +37,12 @@ Autoconnect: no
 9. Default File Permissions: Configure both servers to create files with `660` permissions by default (set `umask 007` in `/etc/bashrc` or `/etc/profile`).
 10. Password Policies: Set password policies on both servers to require a minimum of 8 characters and a maximum age of 60 days (edit `/etc/login.defs` and `/etc/security/pwquality.conf`).
 11. User Automation Script: Write shell scripts on `node1` that create users and groups according to the following parameters. Ensure all users except `cindy` use `autofs` for their home directory paths:
-     `manny:1010` -> groups: `dba_admin`, `dba_managers`, `dba_staff`
-     `moe:1011` -> groups: `dba_admin`, `dba_staff`
-     `jack:1012` -> groups: `dba_intern`, `dba_staff`
-     `marcia:1013` -> groups: `it_staff`, `it_managers`
-     `jan:1014` -> groups: `dba_admin`, `dba_staff`
-     `cindy:1015` -> groups: `dba_intern`, `dba_staff`
+manny:1010:dba_admin,dba_managers,dba_staff
+moe:1011:dba_admin,dba_staff
+jack:1012:dba_intern,dba_staff
+marcia:1013:it_staff,it_managers
+jan:1014:dba_admin,dba_staff
+cindy:1015:dba_intern,dba_staff
 12. Deploy User Script: Secure copy the shell scripts to `node2` using `scp` and perform the same functions.
 13. User Passwords: Set the password on all of the newly created users to `dbapass`.
 14. Sudo Command Alias: Create a sudo command alias named `MESSAGES` with the command `/bin/tail -f /var/log/messages`.
