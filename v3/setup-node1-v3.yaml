@@ -13,7 +13,7 @@
     - name: Create server user with encrypted random password
       ansible.builtin.user:
         name: server
-        password: "{{ 'R@nd0m1z3dL@bP@ss!' | password_hash('sha512') }}"
+        password: "{{ 'password' | password_hash('sha512') }}"
         state: present
 
     - name: Install httpd and firewalld packages
