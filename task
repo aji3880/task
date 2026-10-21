@@ -69,7 +69,7 @@ Question 13. Configure Resource Request & limits into deployment and Apply AutoS
 Minimum replicas = 2 , Maximum replicas = 5 and cpu percentage = 50%
 Default request for containers memory should 100Mi and CPU 50m
 
-Question 14. Install an helm chart ex280-repo from repository https://charts.bitnami.com/bitnami
+Question 14. Install an helm chart ex280-repo from repository https://charts.bitnami.com/bitnami in project helm
 Note: download helm command https://developers.redhat.com/content-gateway/file/pub/cgw/helm/3.19.5.1-71/helm-linux-amd64
 
 Question 15. Create a cronjob test-cron in the `tiger' project
