@@ -17,9 +17,6 @@
         password: "{{ 'R@nd0m1z3dL@bP@ss!' | password_hash('sha512') }}"
         state: present
 
-    # =======================================================
-    # PREPARATION: Clean up existing repo files on node2
-    # =======================================================
     - name: Disable DNF subscription-manager plugin
       ansible.builtin.lineinfile:
         path: /etc/dnf/plugins/subscription-manager.conf
@@ -45,9 +42,6 @@
         cmd: dnf clean all
       changed_when: true
 
-    # =======================================================
-    # PREREQUISITES: Setup Raw Loopback Disk Images
-    # =======================================================
     - name: Check if disk_sdb.img exists
       ansible.builtin.stat:
         path: /var/opt/disk_sdb.img
@@ -68,9 +62,6 @@
         cmd: dd if=/dev/zero of=/var/opt/disk_sdc.img bs=1M count=10240
       when: not disk_sdc_stat.stat.exists
 
-    # =======================================================
-    # PERSISTENCE: Ensure loopback devices re-attach on boot
-    # =======================================================
     - name: Create systemd service for persistent loopback devices
       ansible.builtin.copy:
         dest: /etc/systemd/system/persistent-loopback.service
