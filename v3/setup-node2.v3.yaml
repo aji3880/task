@@ -3,6 +3,7 @@
   hosts: node2
   become: true
   tasks:
+
     - name: Disable rhcd service to prevent log spam
       ansible.builtin.systemd:
         name: rhcd
@@ -10,12 +11,15 @@
         enabled: false
       ignore_errors: true
 
-    - name: Create server2 user with encrypted random password
+    - name: Create server user with encrypted password
       ansible.builtin.user:
         name: server
         password: "{{ 'R@nd0m1z3dL@bP@ss!' | password_hash('sha512') }}"
         state: present
 
+    # =======================================================
+    # PREPARATION: Clean up existing repo files on node2
+    # =======================================================
     - name: Disable DNF subscription-manager plugin
       ansible.builtin.lineinfile:
         path: /etc/dnf/plugins/subscription-manager.conf
@@ -41,6 +45,9 @@
         cmd: dnf clean all
       changed_when: true
 
+    # =======================================================
+    # PREREQUISITES: Setup Raw Loopback Disk Images
+    # =======================================================
     - name: Check if disk_sdb.img exists
       ansible.builtin.stat:
         path: /var/opt/disk_sdb.img
@@ -61,20 +68,32 @@
         cmd: dd if=/dev/zero of=/var/opt/disk_sdc.img bs=1M count=10240
       when: not disk_sdc_stat.stat.exists
 
-    - name: Attach disk_sdb.img to /dev/loop10
-      ansible.builtin.command:
-        cmd: losetup /dev/loop10 /var/opt/disk_sdb.img
-      register: losetup_sdb
-      failed_when:
-        - losetup_sdb.rc != 0
-        - "'busy' not in losetup_sdb.stderr"
-      changed_when: losetup_sdb.rc == 0
+    # =======================================================
+    # PERSISTENCE: Ensure loopback devices re-attach on boot
+    # =======================================================
+    - name: Create systemd service for persistent loopback devices
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/persistent-loopback.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Attach Loopback Disks for Lab
+          DefaultDependencies=no
+          Before=local-fs-pre.target lvm2-monitor.service
+          Wants=local-fs-pre.target
 
-    - name: Attach disk_sdc.img to /dev/loop11
-      ansible.builtin.command:
-        cmd: losetup /dev/loop11 /var/opt/disk_sdc.img
-      register: losetup_sdc
-      failed_when:
-        - losetup_sdc.rc != 0
-        - "'busy' not in losetup_sdc.stderr"
-      changed_when: losetup_sdc.rc == 0
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/sbin/losetup /dev/loop10 /var/opt/disk_sdb.img
+          ExecStart=/usr/sbin/losetup /dev/loop11 /var/opt/disk_sdc.img
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start persistent-loopback service
+      ansible.builtin.systemd:
+        name: persistent-loopback.service
+        enabled: true
+        state: started
+        daemon_reload: true
