@@ -21,7 +21,6 @@
         mode: '0440'
         validate: 'visudo -cf %s'
 
-
     - name: Install firewalld package
       ansible.builtin.dnf:
         name: firewalld
