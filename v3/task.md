@@ -1,5 +1,5 @@
 This task list is written so all dependencies are covered in order. There might be one or two gotchas in there, but nothing should require redoing. setup user 'server' user to manage all nodes.
-server1 192.168.0.248 server2 192.168.0.252 server3 192.168.0.78
+server1 192.168.0.248 server2 192.168.0.252 subscription-manager config --rhsm.auto_enable_yum_plugins=0 server3 192.168.0.78 
 1. Lab Prep - Ignored Break into `server2` and set the password as `password`. Set the target as `multi-user`.
 2. Create a new dummy network interface connection named dummy0 on node1 and node2 with the following parameters:
 Connection Name: dummy0
