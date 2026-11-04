@@ -3,7 +3,6 @@
   hosts: node3
   become: true
   tasks:
-
     - name: Create server user with password and add to wheel group
       ansible.builtin.user:
         name: server
