@@ -1,5 +1,5 @@
 This task list is written so all dependencies are covered in order. There might be one or two gotchas in there, but nothing should require redoing. setup user 'server' user to manage all nodes.
-server1 192.168.0.162 server2 192.168.0.30 subscription-manager config --rhsm.auto_enable_yum_plugins=0 server3 192.168.0.96 
+server1 192.168.0.164 server2 192.168.0.101 subscription-manager config --rhsm.auto_enable_yum_plugins=0 server3 192.168.0.247 
 1. Lab Prep - Ignored Break into `server2` and set the password as `password`. Set the target as `multi-user`.
 2. Create a new dummy network interface connection named dummy0 on node1 and node2 with the following parameters:
 Connection Name: dummy0
@@ -13,7 +13,7 @@ Autoconnect: no
 5. Key-Based Authentication: Enable key-based SSH authentication for `root` on both servers.
 6. Local Repository Setup: Configure the local repositories on `node1` (pointing to the HTTP repo on `node3`).
 7. Copy Repo Config: Secure copy the `.repo` configuration file from `node1` to `node2`.
-8. Autofs Configuration: Configure `autofs` on `node1` to automatically mount individual users' home directories from `/export/home` on `node3` (`192.168.0.32`) to `/mnt/autofs_home/<user_name>`.
+8. Autofs Configuration: Configure `autofs` on `node1` to automatically mount individual users' home directories from `/export/home` on `node3` (`192.168.0.247`) to `/mnt/autofs_home/<user_name>`.
 9. Default File Permissions: Configure both servers to create files with `660` permissions by default (set `umask 007` in `/etc/bashrc` or `/etc/profile`).
 10. Password Policies: Set password policies on both servers to require a minimum of 8 characters and a maximum age of 60 days (edit `/etc/login.defs` and `/etc/security/pwquality.conf`).
 11. User Automation Script: Write shell scripts on `node1` that create users and groups according to the following parameters. Ensure all users except `cindy` use `autofs` for their home directory paths:
@@ -36,8 +36,8 @@ cindy:1015:dba_intern,dba_staff
 19. Soft and Hard Links: On `node1`, create a folder called `/links`. Inside `/links`, create a file called `file01`. Create a soft link called `file02` pointing to `file01`, and a hard link called `file03` pointing to `file01`.
 20. Find SUID Files: Find all setuid (SUID) files on `node1` and save the list to `/root/suid.txt`.
 21. Find Large Files: Find all files larger than 3MB in the `/etc` directory on `node1` and copy them to `/largefiles`.
-22. NFS Mount DBA Files: On both servers, persistently mount `/export/dba_files` from `node3` (`192.168.0.32`) under `/mnt/dba_files`. Ensure `manny` is the user owner and `dba_staff` is the group owner. Apply the SGID bit on the directory, enable the sticky bit, and restrict directory access to members of the `dba_staff` group only.
-23. NFS Mount IT Files: On both servers, persistently mount `/export/it_files` from `node3` (`192.168.0.32`) under `/mnt/it_files`. Ensure `marcia` is the user owner and `it_staff` is the group owner. Apply the SGID bit on the directory, enable the sticky bit, and restrict directory access to members of the `it_staff` group only.
+22. NFS Mount DBA Files: On both servers, persistently mount `/export/dba_files` from `node3` (`192.168.0.247`) under `/mnt/dba_files`. Ensure `manny` is the user owner and `dba_staff` is the group owner. Apply the SGID bit on the directory, enable the sticky bit, and restrict directory access to members of the `dba_staff` group only.
+23. NFS Mount IT Files: On both servers, persistently mount `/export/it_files` from `node3` (`192.168.0.247`) under `/mnt/it_files`. Ensure `marcia` is the user owner and `it_staff` is the group owner. Apply the SGID bit on the directory, enable the sticky bit, and restrict directory access to members of the `it_staff` group only.
 24. At Scheduler Job: Create a job using `at` to write `"This task was easy!"` to `/coolfiles/at_job.txt` in 10 minutes.
 25. Cron Scheduler Job: Create a job using `cron` to write `"Wow! I'm going to pass this test!"` every Tuesday at 3pm to `/var/log/messages`.
 26. Shell Script Logic: Write a script named `awesome.sh` in the `/root` directory on `node1`:
@@ -49,7 +49,7 @@ cindy:1015:dba_intern,dba_staff
 29. Systemd Boot Target: On `node1`, set the default systemd target to `multi-user.target` and verify the active target.
 30. NTP Synchronization: Configure NTP synchronization on both servers using `chrony`, pointing them to the local NTP server or lab gateway (`192.168.0.1` or `node3` IP).
 31. Persistent Journaling: Configure persistent journaling for `systemd-journald` on both servers (create `/var/log/journal`).
-32. LVM Volume Group Creation: On `node2`, create a new 2GiB volume group named `platforms_vg` on `/dev/loop10` (or available secondary disk).
+247. LVM Volume Group Creation: On `node2`, create a new 2GiB volume group named `platforms_vg` on `/dev/loop10` (or available secondary disk).
 33. Logical Volume Creation: Under the `platforms_vg` volume group, create a 500MiB logical volume named `platforms_lv` and format it as `ext4`.
 34. Persistent Mount: Mount it persistently (`/etc/fstab`) under `/mnt/platforms_lv`.
 35. LVM Extension: Extend the `platforms_lv` logical volume and filesystem by 500MiB (totaling 1GiB).
@@ -59,5 +59,5 @@ cindy:1015:dba_intern,dba_staff
 39. LVM Thin Provisioning: On `node2`, create a 5TB thin-provisioned volume named `thin_vol` backed by a pool called `thin_pool` on a 5GB volume group called `thin_vg` using `/dev/loop11`. Format it as `xfs` and mount it persistently under `/mnt/thin_vol`.
 40. Tuned Profile Setup: On `node1`, set a merged `tuned` profile using the `powersave` and `virtual-guest` profiles.
 41. Process Niceness: On `node1`, start one `stress-ng` (or `stress`) process with a niceness value of 19. Adjust the niceness value of the running stress process to 10, then kill the process.
-42. Container Image Build: On `node1`, as the user `cindy`, create a container image from `http://192.168.0.32/Containerfile` (or local Containerfile) with the tag `web_image` using `podman`.
+42. Container Image Build: On `node1`, as the user `cindy`, create a container image from `http://192.168.0.247/Containerfile` (or local Containerfile) with the tag `web_image` using `podman`.
 43. Rootless Container Service: From the newly created image, deploy a rootless container service with the container name `cindy_web`. Map the web files directory to `~/web_files`, and map local port `8000` to container port `80`. Create a default index page saying `"Welcome to Cindy's Web Server!"`. Ensure the systemd user service is enabled and the website is accessible.
