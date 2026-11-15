@@ -1,5 +1,5 @@
 ---
-- name: Setup server 2 (Lab Problem - Task 1)
+- name: Setup server 2 
   hosts: server-2
   become: true
   tasks:
@@ -40,6 +40,25 @@
     - name: Clean DNF cache and refresh repo metadata
       ansible.builtin.command:
         cmd: dnf clean all
+      changed_when: true
+
+    - name: Set GRUB timeout to 15 seconds
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_TIMEOUT='
+        2line: 'GRUB_TIMEOUT=15'
+        state: present
+
+    - name: Ensure GRUB menu is visible (not hidden)
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_TIMEOUT_STYLE='
+        line: 'GRUB_TIMEOUT_STYLE=menu'
+        state: present
+
+    - name: Regenerate GRUB configuration (BIOS & UEFI compatible on RHEL 9)
+      ansible.builtin.command:
+        cmd: grub2-mkconfig -o /boot/grub2/grub.cfg
       changed_when: true
 
     - name: Randomize root password so user must break in via GRUB
