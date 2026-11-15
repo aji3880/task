@@ -1,5 +1,5 @@
 ---
-- name: Setup server 2
+- name: Setup server 2 (Lab Problem - Task 1)
   hosts: server-2
   become: true
   tasks:
@@ -41,3 +41,22 @@
       ansible.builtin.command:
         cmd: dnf clean all
       changed_when: true
+
+    - name: Randomize root password so user must break in via GRUB
+      ansible.builtin.user:
+        name: root
+        password: "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') | password_hash('sha512') }}"
+        state: present
+
+    - name: Change default systemd target away from multi-user (set to rescue.target)
+      ansible.builtin.file:
+        src: /usr/lib/systemd/system/rescue.target
+        dest: /etc/systemd/system/default.target
+        state: link
+        force: true
+
+    - name: Reboot server-2 to apply the broken/rescue boot state
+      ansible.builtin.reboot:
+        msg: "Rebooting server-2 into lab problem state (rescue.target)"
+        reboot_timeout: 60
+      ignore_errors: true
