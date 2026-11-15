@@ -3,7 +3,6 @@
   hosts: server-2
   become: true
   tasks:
-
     - name: Disable rhcd service to prevent log spam
       ansible.builtin.systemd:
         name: rhcd
@@ -58,7 +57,7 @@
 
     - name: Regenerate GRUB configuration (BIOS & UEFI compatible on RHEL 9)
       ansible.builtin.command:
-        cmd: grub2-mkconfig -o /boot/grub2/grub.cfg
+        cmd: grub2-mkconfig -o /boot/grub2/grub.cfg --update-bls-cmdline
       changed_when: true
 
     - name: Randomize root password so user must break in via GRUB
