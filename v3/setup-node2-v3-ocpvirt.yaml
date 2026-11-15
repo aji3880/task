@@ -74,3 +74,4 @@
         state: link
         force: true
 ##reboot manual
+## tambah sed -i 's/2line:/line:/g' /home/admin/playbook/server-2.yaml
