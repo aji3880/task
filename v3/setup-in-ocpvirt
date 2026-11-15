@@ -1,3 +1,19 @@
 -  add new user or use the exist user
 - sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null on every server and restart service
 - generate ssh and copy id ssh to other server on jumphost
+- sudo sed -i '/server-jh\|server-1\|server-2\|server-3/d' /etc/hosts
+- sudo tee -a /etc/hosts << 'EOF'
+10.132.2.16 server-jh
+10.132.2.12 server-1
+10.135.0.12 server-2
+10.133.2.13 server-3
+EOF (set to the node ip)
+
+- on bastion 
+sudo cp /etc/rhsm/ca/katello-server-ca.pem /tmp/
+sudo cp /etc/pki/entitlement/7***uniq string***.pem /tmp/
+sudo cp /etc/pki/entitlement/7***uniq string***-key.pem /tmp/
+sudo cp /etc/yum.repos.d/redhat.repo /tmp/
+then grant owner to user so its easy to scp
+virtctl scp /tmp/name-file admin@vmi/node:/tmp/
+

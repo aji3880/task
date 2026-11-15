@@ -1,6 +1,6 @@
 ---
-- name: Full Setup Lab NFS, Container, and Local HTTP Repo di Node3 (RHEL 8)
-  hosts: node3
+- name: Setup NFS, Container, and Local HTTP Repo di Node3
+  hosts: server-3
   become: true
   tasks:
     - name: Create server user with password and add to wheel group

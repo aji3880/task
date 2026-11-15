@@ -1,0 +1,43 @@
+---
+- name: Setup server 2
+  hosts: server-2
+  become: true
+  tasks:
+
+    - name: Disable rhcd service to prevent log spam
+      ansible.builtin.systemd:
+        name: rhcd
+        state: stopped
+        enabled: false
+      ignore_errors: true
+
+    - name: Create server user with encrypted password
+      ansible.builtin.user:
+        name: server
+        password: "{{ 'R@nd0m1z3dL@bP@ss!' | password_hash('sha512') }}"
+        state: present
+
+    - name: Disable DNF subscription-manager plugin
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/plugins/subscription-manager.conf
+        regexp: '^enabled\s*='
+        line: 'enabled=0'
+        state: present
+        mode: '0644'
+
+    - name: Find all files in /etc/yum.repos.d/
+      ansible.builtin.find:
+        paths: /etc/yum.repos.d/
+        file_type: file
+      register: repo_files
+
+    - name: Remove all repo files in /etc/yum.repos.d/
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ repo_files.files }}"
+
+    - name: Clean DNF cache and refresh repo metadata
+      ansible.builtin.command:
+        cmd: dnf clean all
+      changed_when: true
