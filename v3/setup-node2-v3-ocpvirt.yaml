@@ -54,9 +54,4 @@
         dest: /etc/systemd/system/default.target
         state: link
         force: true
-
-    - name: Reboot server-2 to apply the broken/rescue boot state
-      ansible.builtin.reboot:
-        msg: "Rebooting server-2 into lab problem state (rescue.target)"
-        reboot_timeout: 60
-      ignore_errors: true
+##reboot manual
