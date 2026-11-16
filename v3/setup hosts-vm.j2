@@ -1,0 +1,10 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+{% set vmi_data = hostvars[ansible_play_hosts_all[0]].vmi_result.stdout | from_json %}
+{% for item in vmi_data['items'] %}
+{% set vm_name = item['metadata']['name'] %}
+{% if vm_name in groups['server'] and item['status']['interfaces'] is defined %}
+{{ item['status']['interfaces'][0]['ipAddress'] }} {{ vm_name }}
+{% endif %}
+{% endfor %}

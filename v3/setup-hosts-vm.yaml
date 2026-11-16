@@ -1,0 +1,26 @@
+---
+- name: Update hosts file using OpenShift VMI IP
+  become: true
+  hosts: all
+  gather_facts: true
+
+  pre_tasks:
+    - name: Get VMI information from OpenShift
+      ansible.builtin.command:
+        cmd: oc get vmi -o json
+      delegate_to: localhost
+      run_once: true
+      register: vmi_result
+      changed_when: false
+      environment:
+        KUBECONFIG: /home/admin/.kube/config
+
+  tasks:
+    - name: Generate hosts file
+      ansible.builtin.template:
+        src: hosts-v2.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: '0644'
+      when: "'server' in group_names"
