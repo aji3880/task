@@ -200,17 +200,22 @@
       notify: Restart NFS Service
 
     - name: Allow NFS and HTTP services through firewalld
-      ansible.posix.firewalld:
-        service: "{{ item }}"
-        permanent: true
-        immediate: true
-        state: enabled
+      ansible.builtin.command:
+        cmd: "firewall-cmd --permanent --add-service={{ item }}"
       loop:
         - nfs
         - mountd
         - rpc-bind
         - http
-      ignore_errors: true
+      notify: Reload Firewalld
+
+    - name: Remove old repodata folders if present before reposync
+      ansible.builtin.file:
+        path: "/var/www/html/repo/{{ item }}/repodata"
+        state: absent
+      loop:
+        - BaseOS
+        - AppStream
 
     - name: Fallback firewall-cmd if ansible.posix collection is absent
       ansible.builtin.command:
