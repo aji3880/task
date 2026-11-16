@@ -1,13 +1,80 @@
 ---
-- name: Setup NFS, Container, and Local HTTP Repo di Node3
+- name: Setup RHSM Credentials, NFS, Container, and Local HTTP Repo di Server-3
   hosts: server-3
   become: true
   tasks:
-    - name: Remove incomplete local.repo before package installation
+    # -------------------------------------------------------------------------
+    # 1. PENYELESAIAN MASALAH REPO & SERTIFIKAT SATELLITE (DARI JUMP HOST)
+    # -------------------------------------------------------------------------
+    - name: Remove conflicting redhat.repo and old local.repo on server-3
       ansible.builtin.file:
-        path: /etc/yum.repos.d/local.repo
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/yum.repos.d/redhat.repo
+        - /etc/yum.repos.d/local.repo
+
+    - name: Disable automatic redhat.repo generation in rhsm.conf
+      ansible.builtin.lineinfile:
+        path: /etc/rhsm/rhsm.conf
+        regexp: '^manage_repos\s*='
+        line: 'manage_repos = 0'
+        state: present
+      ignore_errors: true
+
+    - name: Disable subscription-manager DNF plugin warnings
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/plugins/subscription-manager.conf
+        regexp: '^enabled\s*='
+        line: 'enabled=0'
+        state: present
+      ignore_errors: true
+
+    - name: Prepare temporary RHSM bundle on jump host (localhost)
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.shell: |
+        rm -rf /tmp/rhsm-bundle && mkdir -p /tmp/rhsm-bundle/repos
+        cp -r /etc/pki/consumer /tmp/rhsm-bundle/
+        cp -r /etc/pki/entitlement /tmp/rhsm-bundle/
+        cp -r /etc/rhsm /tmp/rhsm-bundle/
+        cp /etc/yum.repos.d/*.repo /tmp/rhsm-bundle/repos/
+        rm -f /tmp/rhsm-bundle/repos/redhat.repo
+        sed -i 's/^manage_repos\s*=.*/manage_repos = 0/' /tmp/rhsm-bundle/rhsm/rhsm.conf
+      changed_when: true
+
+    - name: Ensure clean target directories on server-3 before copy
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/pki/consumer
+        - /etc/pki/entitlement
+        - /etc/rhsm
+
+    - name: Copy valid RHSM certificates and Satellite repo files to server-3
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: '/tmp/rhsm-bundle/consumer',    dest: '/etc/pki/',       mode: '0755' }
+        - { src: '/tmp/rhsm-bundle/entitlement', dest: '/etc/pki/',       mode: '0755' }
+        - { src: '/tmp/rhsm-bundle/rhsm',        dest: '/etc/',           mode: '0755' }
+        - { src: '/tmp/rhsm-bundle/repos/',      dest: '/etc/yum.repos.d/', mode: '0644' }
+
+    - name: Cleanup temporary RHSM bundle on jump host
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.file:
+        path: /tmp/rhsm-bundle
         state: absent
 
+    # -------------------------------------------------------------------------
+    # 2. KONFIGURASI USER, PAKET DASAR & LAYANAN
+    # -------------------------------------------------------------------------
     - name: Create server user with password and add to wheel group
       ansible.builtin.user:
         name: server
@@ -25,7 +92,7 @@
         mode: '0440'
         validate: 'visudo -cf %s'
 
-    - name: Install required packages
+    - name: Install required packages from Satellite RHEL 9 repos
       ansible.builtin.dnf:
         name:
           - firewalld
@@ -34,9 +101,13 @@
           - httpd
           - createrepo_c
           - yum-utils
+        disablerepo: "*"
+        enablerepo:
+          - rhel-9-for-x86_64-baseos-rpms
+          - rhel-9-for-x86_64-appstream-rpms
         state: present
 
-    - name: Enable and start services
+    - name: Enable and start core services
       ansible.builtin.systemd:
         name: "{{ item }}"
         enabled: true
@@ -46,6 +117,9 @@
         - nfs-server
         - httpd
 
+    # -------------------------------------------------------------------------
+    # 3. KONFIGURASI NFS EXPORTS & USER HOME DIRECTORIES
+    # -------------------------------------------------------------------------
     - name: Create NFS export top-level directories
       ansible.builtin.file:
         path: "{{ item }}"
@@ -114,7 +188,7 @@
         - { user: 'jan',    uid: 1014, gid: 1014 }
         - { user: 'cindy',  uid: 1015, gid: 1015 }
 
-    - name: Setup the /etc/exports file dynamically for client nodes
+    - name: Setup /etc/exports for client nodes
       ansible.builtin.blockinfile:
         path: /etc/exports
         create: true
@@ -126,6 +200,19 @@
       notify: Restart NFS Service
 
     - name: Allow NFS and HTTP services through firewalld
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop:
+        - nfs
+        - mountd
+        - rpc-bind
+        - http
+      ignore_errors: true
+
+    - name: Fallback firewall-cmd if ansible.posix collection is absent
       ansible.builtin.command:
         cmd: "firewall-cmd --permanent --add-service={{ item }}"
       loop:
@@ -135,7 +222,10 @@
         - http
       notify: Reload Firewalld
 
-    - name: Create Containerfile on node3
+    # -------------------------------------------------------------------------
+    # 4. CONTAINERFILE & SINKRONISASI REPO LOKAL HTTP
+    # -------------------------------------------------------------------------
+    - name: Create Containerfile on server-3
       ansible.builtin.copy:
         dest: /root/Containerfile
         mode: '0644'
@@ -147,40 +237,40 @@
           EXPOSE 80
           CMD [ "/sbin/init" ]
 
-    - name: Create repository directory under HTML root and generate metadata
-      ansible.builtin.shell: |
-        mkdir -p /var/www/html/repo/BaseOS /var/www/html/repo/AppStream
-        createrepo_c /var/www/html/repo/BaseOS
-        createrepo_c /var/www/html/repo/AppStream
+    - name: Create local HTTP repository directories
+      ansible.builtin.file:
+        path: "/var/www/html/repo/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - BaseOS
+        - AppStream
+
+    - name: Sync RHEL 9 BaseOS packages to /var/www/html/repo/BaseOS
+      ansible.builtin.command:
+        cmd: >
+          dnf reposync --repoid=rhel-9-for-x86_64-baseos-rpms
+          -p /var/www/html/repo/BaseOS
+          --download-metadata
+          --norepopath
+          --newest-only
       changed_when: true
 
-    - name: Setup /etc/yum.repos.d/local.repo
-      ansible.builtin.blockinfile:
-        path: /etc/yum.repos.d/local.repo
-        create: true
-        mode: '0644'
-        block: |
-          [BaseOS-Local]
-          name=Red Hat Enterprise Linux 9 BaseOS (Local HTTP)
-          metadata_expire=-1
-          enabled=1
-          gpgcheck=0
-          baseurl=file:///var/www/html/repo/BaseOS/
+    - name: Sync RHEL 9 AppStream packages to /var/www/html/repo/AppStream
+      ansible.builtin.command:
+        cmd: >
+          dnf reposync --repoid=rhel-9-for-x86_64-appstream-rpms
+          -p /var/www/html/repo/AppStream
+          --download-metadata
+          --norepopath
+          --newest-only
+      changed_when: true
 
-          [AppStream-Local]
-          name=Red Hat Enterprise Linux 9 AppStream (Local HTTP)
-          metadata_expire=-1
-          enabled=1
-          gpgcheck=0
-          baseurl=file:///var/www/html/repo/AppStream/
-
-    - name: Suppress subscription-manager warnings
-      ansible.builtin.lineinfile:
-        path: /etc/dnf/plugins/subscription-manager.conf
-        regexp: '^enabled\s*='
-        line: 'enabled=0'
-        state: present
-      ignore_errors: true
+    - name: Set permissions and SELinux httpd context on /var/www/html/repo
+      ansible.builtin.shell: |
+        chmod -R 755 /var/www/html/repo
+        restorecon -Rv /var/www/html/repo
+      changed_when: true
 
   handlers:
     - name: Restart NFS Service
