@@ -237,9 +237,19 @@
         - BaseOS
         - AppStream
 
-    - name: Create Containerfile on server-3
+    - name: Ensure /var/www/html/containers directory exists
+      ansible.builtin.file:
+        path: /var/www/html/containers
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create Containerfile in /root and /var/www/html/containers on server-3
       ansible.builtin.copy:
-        dest: /root/Containerfile
+        dest: "{{ item }}"
+        owner: root
+        group: root
         mode: '0644'
         content: |
           FROM registry.access.redhat.com/ubi9/ubi:latest
@@ -248,6 +258,9 @@
           RUN mkdir /etc/systemd/system/httpd.service.d/; echo -e '[Service]\nRestart=always' | tee /etc/systemd/system/httpd.service.d/httpd.conf
           EXPOSE 80
           CMD [ "/sbin/init" ]
+      loop:
+        - /root/Containerfile
+        - /var/www/html/containers/Containerfile
 
     - name: Create local HTTP repository directories
       ansible.builtin.file:
@@ -278,10 +291,10 @@
           --newest-only
       changed_when: true
 
-    - name: Set permissions and SELinux httpd context on /var/www/html/repo
+    - name: Set permissions and SELinux httpd context on /var/www/html/repo and /var/www/html/containers
       ansible.builtin.shell: |
-        chmod -R 755 /var/www/html/repo
-        restorecon -Rv /var/www/html/repo
+        chmod -R 755 /var/www/html/repo /var/www/html/containers
+        restorecon -Rv /var/www/html/repo /var/www/html/containers
       changed_when: true
 
   handlers:
