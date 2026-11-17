@@ -47,7 +47,7 @@ cindy:1015:dba_intern,dba_staff
 27. Troubleshoot Web Server: Fix the web server (`httpd`) on `node1` (port 85 & SELinux context) and ensure all files are accessible without modifying the main `httpd` configuration files. Ensure it is accessible from `node2` and client browser.
 28. SELinux Permissive Mode: Put SELinux on `node2` in `Permissive` mode both temporarily and permanently (`/etc/selinux/config`).
 29. Systemd Boot Target: On `node1`, set the default systemd target to `multi-user.target` and verify the active target.
-30. NTP Synchronization: Configure NTP synchronization on both servers using `chrony`, pointing them to the local NTP server or lab gateway (`192.168.0.1` or `node3` IP).
+30. NTP Synchronization: Configure NTP synchronization on both servers using `chrony`, pointing them to the local NTP server-3 .
 31. Persistent Journaling: Configure persistent journaling for `systemd-journald` on both servers (create `/var/log/journal`).
 247. LVM Volume Group Creation: On `node2`, create a new 2GiB volume group named `platforms_vg` on `/dev/loop10` (or available secondary disk).
 33. Logical Volume Creation: Under the `platforms_vg` volume group, create a 500MiB logical volume named `platforms_lv` and format it as `ext4`.

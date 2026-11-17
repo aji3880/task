@@ -1,5 +1,5 @@
 ---
-- name: Setup RHSM Credentials, NFS, Container, and Local HTTP Repo di Server-3
+- name: Setup RHSM Credentials, NFS, Container, NTP, and Local HTTP Repo di Server-3
   hosts: server-3
   become: true
   tasks:
@@ -101,6 +101,7 @@
           - httpd
           - createrepo_c
           - yum-utils
+          - chrony
         disablerepo: "*"
         enablerepo:
           - rhel-9-for-x86_64-baseos-rpms
@@ -116,9 +117,24 @@
         - firewalld
         - nfs-server
         - httpd
+        - chronyd
 
     # -------------------------------------------------------------------------
-    # 3. KONFIGURASI NFS EXPORTS & USER HOME DIRECTORIES
+    # 3. KONFIGURASI LOCAL NTP SERVER (CHRONY) DI SERVER-3
+    # -------------------------------------------------------------------------
+    - name: Configure chrony on server-3 as local NTP server
+      ansible.builtin.blockinfile:
+        path: /etc/chrony.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - LOCAL NTP SERVER"
+        block: |
+          # Izinkan klien dari jaringan lokal (10.0.0.0/8 atau semua subnet lab) untuk sync waktu
+          allow 0.0.0.0/0
+          # Tetap layani waktu lokal meskipun tidak terhubung ke upstream NTP internet
+          local stratum 10
+      notify: Restart Chronyd Service
+
+    # -------------------------------------------------------------------------
+    # 4. KONFIGURASI NFS EXPORTS & USER HOME DIRECTORIES
     # -------------------------------------------------------------------------
     - name: Create NFS export top-level directories
       ansible.builtin.file:
@@ -199,7 +215,7 @@
           /export/dba_files    *(rw,sync,no_root_squash)
       notify: Restart NFS Service
 
-    - name: Allow NFS and HTTP services through firewalld
+    - name: Allow NFS, HTTP, and NTP services through firewalld
       ansible.builtin.command:
         cmd: "firewall-cmd --permanent --add-service={{ item }}"
       loop:
@@ -207,8 +223,12 @@
         - mountd
         - rpc-bind
         - http
+        - ntp
       notify: Reload Firewalld
 
+    # -------------------------------------------------------------------------
+    # 5. CONTAINERFILE & SINKRONISASI REPO LOKAL HTTP
+    # -------------------------------------------------------------------------
     - name: Remove old repodata folders if present before reposync
       ansible.builtin.file:
         path: "/var/www/html/repo/{{ item }}/repodata"
@@ -217,19 +237,6 @@
         - BaseOS
         - AppStream
 
-    - name: Fallback firewall-cmd if ansible.posix collection is absent
-      ansible.builtin.command:
-        cmd: "firewall-cmd --permanent --add-service={{ item }}"
-      loop:
-        - nfs
-        - mountd
-        - rpc-bind
-        - http
-      notify: Reload Firewalld
-
-    # -------------------------------------------------------------------------
-    # 4. CONTAINERFILE & SINKRONISASI REPO LOKAL HTTP
-    # -------------------------------------------------------------------------
     - name: Create Containerfile on server-3
       ansible.builtin.copy:
         dest: /root/Containerfile
@@ -281,6 +288,11 @@
     - name: Restart NFS Service
       ansible.builtin.systemd:
         name: nfs-server
+        state: restarted
+
+    - name: Restart Chronyd Service
+      ansible.builtin.systemd:
+        name: chronyd
         state: restarted
 
     - name: Reload Firewalld
