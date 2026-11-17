@@ -253,9 +253,13 @@
         mode: '0644'
         content: |
           FROM registry.access.redhat.com/ubi9/ubi:latest
-          RUN dnf -y install httpd; dnf clean all; systemctl enable httpd;
+          RUN rm -f /etc/yum.repos.d/*.repo && \
+              printf "[BaseOS]\nname=BaseOS\nbaseurl=http://10.132.2.5/repo/BaseOS\ngpgcheck=0\nenabled=1\n\n[AppStream]\nname=AppStream\nbaseurl=http://10.132.2.5/repo/AppStream\ngpgcheck=0\nenabled=1\n" > /etc/yum.repos.d/local.repo && \
+              dnf --setopt=subscription-manager.enabled=0 -y install httpd && \
+              dnf clean all && \
+              systemctl enable httpd
           RUN echo "Successful Web Server Test" | tee /var/www/html/index.html
-          RUN mkdir /etc/systemd/system/httpd.service.d/; echo -e '[Service]\nRestart=always' | tee /etc/systemd/system/httpd.service.d/httpd.conf
+          RUN mkdir -p /etc/systemd/system/httpd.service.d/ && echo -e '[Service]\nRestart=always' | tee /etc/systemd/system/httpd.service.d/httpd.conf
           EXPOSE 80
           CMD [ "/sbin/init" ]
       loop:
