@@ -59,5 +59,5 @@ cindy:1015:dba_intern,dba_staff
 39. LVM Thin Provisioning: On `node2`, create a 5TB thin-provisioned volume named `thin_vol` backed by a pool called `thin_pool` on a 5GB volume group called `thin_vg` using `/dev/loop11`. Format it as `xfs` and mount it persistently under `/mnt/thin_vol`.
 40. Tuned Profile Setup: On `node1`, set a merged `tuned` profile using the `powersave` and `virtual-guest` profiles.
 41. Process Niceness: On `node1`, start one `stress-ng` (or `stress`) process with a niceness value of 19. Adjust the niceness value of the running stress process to 10, then kill the process.
-42. Container Image Build: On `node1`, as the user `cindy`, create a container image from `http://192.168.0.247/Containerfile` (or local Containerfile) with the tag `web_image` using `podman`.
+42. Container Image Build: On `node1`, as the user `cindy`, create a container image from `http://10.132.2.5/Containerfile` (or local Containerfile) with the tag `web_image` using `podman`.
 43. Rootless Container Service: From the newly created image, deploy a rootless container service with the container name `cindy_web`. Map the web files directory to `~/web_files`, and map local port `8000` to container port `80`. Create a default index page saying `"Welcome to Cindy's Web Server!"`. Ensure the systemd user service is enabled and the website is accessible.
