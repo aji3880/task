@@ -3,9 +3,6 @@
   hosts: server-3
   become: true
   tasks:
-    # -------------------------------------------------------------------------
-    # 1. PENYELESAIAN MASALAH REPO & SERTIFIKAT SATELLITE (DARI JUMP HOST)
-    # -------------------------------------------------------------------------
     - name: Remove conflicting redhat.repo and old local.repo on server-3
       ansible.builtin.file:
         path: "{{ item }}"
@@ -72,9 +69,6 @@
         path: /tmp/rhsm-bundle
         state: absent
 
-    # -------------------------------------------------------------------------
-    # 2. KONFIGURASI USER, PAKET DASAR & LAYANAN
-    # -------------------------------------------------------------------------
     - name: Create server user with password and add to wheel group
       ansible.builtin.user:
         name: server
@@ -119,9 +113,6 @@
         - httpd
         - chronyd
 
-    # -------------------------------------------------------------------------
-    # 3. KONFIGURASI LOCAL NTP SERVER (CHRONY) DI SERVER-3
-    # -------------------------------------------------------------------------
     - name: Configure chrony on server-3 as local NTP server
       ansible.builtin.blockinfile:
         path: /etc/chrony.conf
@@ -133,9 +124,6 @@
           local stratum 10
       notify: Restart Chronyd Service
 
-    # -------------------------------------------------------------------------
-    # 4. KONFIGURASI NFS EXPORTS & USER HOME DIRECTORIES
-    # -------------------------------------------------------------------------
     - name: Create NFS export top-level directories
       ansible.builtin.file:
         path: "{{ item }}"
@@ -226,9 +214,6 @@
         - ntp
       notify: Reload Firewalld
 
-    # -------------------------------------------------------------------------
-    # 5. CONTAINERFILE & SINKRONISASI REPO LOKAL HTTP
-    # -------------------------------------------------------------------------
     - name: Remove old repodata folders if present before reposync
       ansible.builtin.file:
         path: "/var/www/html/repo/{{ item }}/repodata"
