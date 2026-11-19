@@ -81,3 +81,70 @@
     - name: Reload Firewalld
       ansible.builtin.command:
         cmd: firewall-cmd --reload
+
+# apabila didalam ocp-virtulization
+    - name: Remove conflicting redhat.repo and old local.repo on server-3
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/yum.repos.d/redhat.repo
+        - /etc/yum.repos.d/local.repo
+
+    - name: Disable automatic redhat.repo generation in rhsm.conf
+      ansible.builtin.lineinfile:
+        path: /etc/rhsm/rhsm.conf
+        regexp: '^manage_repos\s*='
+        line: 'manage_repos = 0'
+        state: present
+      ignore_errors: true
+
+    - name: Disable subscription-manager DNF plugin warnings
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/plugins/subscription-manager.conf
+        regexp: '^enabled\s*='
+        line: 'enabled=0'
+        state: present
+      ignore_errors: true
+
+    - name: Prepare temporary RHSM bundle on jump host (localhost)
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.shell: |
+        rm -rf /tmp/rhsm-bundle && mkdir -p /tmp/rhsm-bundle/repos
+        cp -r /etc/pki/consumer /tmp/rhsm-bundle/
+        cp -r /etc/pki/entitlement /tmp/rhsm-bundle/
+        cp -r /etc/rhsm /tmp/rhsm-bundle/
+        cp /etc/yum.repos.d/*.repo /tmp/rhsm-bundle/repos/
+        rm -f /tmp/rhsm-bundle/repos/redhat.repo
+        sed -i 's/^manage_repos\s*=.*/manage_repos = 0/' /tmp/rhsm-bundle/rhsm/rhsm.conf
+      changed_when: true
+
+    - name: Ensure clean target directories on server-3 before copy
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/pki/consumer
+        - /etc/pki/entitlement
+        - /etc/rhsm
+
+    - name: Copy valid RHSM certificates and Satellite repo files to server-3
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: '/tmp/rhsm-bundle/consumer',    dest: '/etc/pki/',       mode: '0755' }
+        - { src: '/tmp/rhsm-bundle/entitlement', dest: '/etc/pki/',       mode: '0755' }
+        - { src: '/tmp/rhsm-bundle/rhsm',        dest: '/etc/',           mode: '0755' }
+        - { src: '/tmp/rhsm-bundle/repos/',      dest: '/etc/yum.repos.d/', mode: '0644' }
+
+    - name: Cleanup temporary RHSM bundle on jump host
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.file:
+        path: /tmp/rhsm-bundle
+        state: absent
