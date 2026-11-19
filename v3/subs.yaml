@@ -3,15 +3,12 @@
   hosts: all
   become: true
   tasks:
-    - name: Remove conflicting redhat.repo and old local.repo on all
+    - name: Remove old local.repo if present on target nodes
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: /etc/yum.repos.d/local.repo
         state: absent
-      loop:
-        - /etc/yum.repos.d/redhat.repo
-        - /etc/yum.repos.d/local.repo
 
-    - name: Disable automatic redhat.repo generation in rhsm.conf
+    - name: Disable automatic redhat.repo overwrite in rhsm.conf
       ansible.builtin.lineinfile:
         path: /etc/rhsm/rhsm.conf
         regexp: '^manage_repos\s*='
@@ -36,8 +33,8 @@
         cp -r /etc/pki/entitlement /tmp/rhsm-bundle/
         cp -r /etc/rhsm /tmp/rhsm-bundle/
         cp /etc/yum.repos.d/*.repo /tmp/rhsm-bundle/repos/
-        rm -f /tmp/rhsm-bundle/repos/redhat.repo
         sed -i 's/^manage_repos\s*=.*/manage_repos = 0/' /tmp/rhsm-bundle/rhsm/rhsm.conf
+        chmod -R a+rX /tmp/rhsm-bundle
       changed_when: true
 
     - name: Ensure clean target directories on all before copy
@@ -69,8 +66,16 @@
         path: /tmp/rhsm-bundle
         state: absent
 
-    - name: Clean old DNF cache and build new metadata cache (dnf makecache)
+    - name: Enable BaseOS and AppStream repositories explicitly
+      ansible.builtin.command:
+        cmd: dnf config-manager --set-enabled rhel-9-for-x86_64-baseos-rpms rhel-9-for-x86_64-appstream-rpms
+      changed_when: true
+      ignore_errors: true
+
+    - name: Clean old DNF cache, build metadata cache, and verify repo list
       ansible.builtin.shell: |
+        set -e
         dnf clean all
         dnf makecache
+        dnf repolist --enabled | grep -E "baseos|appstream"
       changed_when: true
