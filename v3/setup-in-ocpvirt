@@ -1,6 +1,6 @@
 -  add new user or use the exist user
-- sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null on every server and restart service
-- generate ssh and copy id ssh to other server on jumphost
+- sudo  2>/dev/null on every server and restart service
+- generate ssh and copy id ssh to other ssed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*.conferver on jumphost
 - sudo sed -i '/server-jh\|server-1\|server-2\|server-3/d' /etc/hosts
 - sudo tee -a /etc/hosts << 'EOF'
 10.132.2.16 server-jh

@@ -173,7 +173,7 @@
         content: |
           FROM registry.access.redhat.com/ubi9/ubi:latest
           RUN rm -f /etc/yum.repos.d/*.repo && \
-              printf "[BaseOS]\nname=BaseOS\nbaseurl=http://10.132.2.5/repo/BaseOS\ngpgcheck=0\nenabled=1\n\n[AppStream]\nname=AppStream\nbaseurl=http://10.132.2.5/repo/AppStream\ngpgcheck=0\nenabled=1\n" > /etc/yum.repos.d/local.repo && \
+              printf "[BaseOS]\nname=BaseOS\nbaseurl=http://10.133.2.48/repo/BaseOS\ngpgcheck=0\nenabled=1\n\n[AppStream]\nname=AppStream\nbaseurl=http://10.133.2.48/repo/AppStream\ngpgcheck=0\nenabled=1\n" > /etc/yum.repos.d/local.repo && \
               dnf --setopt=subscription-manager.enabled=0 -y install httpd && \
               dnf clean all && \
               systemctl enable httpd
